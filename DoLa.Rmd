@@ -1,0 +1,1672 @@
+---
+title: "Do Lattes para o PPG - *DoLa*"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	comment = NA,
+	results = "asis",
+	warnings = FALSE
+)
+```
+
+```{r, echo=FALSE}
+
+###--------------------------------------------------------------- CONFIGURAÇÃO
+
+# período da análise
+ano_ini <- ano_ini 
+ano_fim <- ano_fim
+
+# informar número de lattes específico para extrato individual ou NULL para todos os extratos
+id_especifico <- id_especifico 
+#id_especifico <- "6235690302506735" 
+
+# mostrar classificação geral (sempre!) e/ou pontuacao geral (opcional) e/ou pontuacao da producao tecnica (PTT) (opcional)
+# A pontuação utilizada para a classificação tem como base nos
+# ANEXOs I e II da Norma de Credenciamento e recredenciamento do PPGOceanografia
+# A pontuação é utilizada APENAS como referência para o credenciamento de novos docentes do PPGOceanografia
+# Caso nao haja uma arquivo para pontuação dos livros, todos estão sendo pontuados com valor 1
+fl_classificacao <- fl_classificacao 
+fl_pontuacaogeral <- F
+fl_tecnica <- F
+
+# INSTITUICAO
+# incluir dentro de c() os possíveis nomes da instituição, separados por vírgula
+nome_instituicao <- nome_instituicao
+
+### OBS: o primerio nome na lista sera usado como referencia em banca.R 
+
+# CURSO
+# incluir dentro de c() os possíveis nomes do curso, separados por vírgula
+nome_curso <- nome_curso
+
+### OBS: o primerio nome na lista sera usado como referencia em banca.R 
+
+# ÁREA
+# incluir dentro de c() os possíveis nomes de área, separados por vírgula
+nome_area <- nome_area
+
+# descomentar a linha da pontuação que se deseja aferir: docentes ou discentes
+source("ScriptsR\\_pontuacaoCapesDocente.R"); colegiado <- FALSE
+# source("ScriptsR\\_pontuacaoCapesDiscente.R"); colegiado <- FALSE
+
+# Nome do arquivo contendo a classificacao Qualis
+xlsx_qualis <- xlsx_qualis
+ 
+# Nome do arquivo contendo a classificacao Qualis Livros 
+xlsx_qualis_livros <- xlsx_qualis_livros
+
+# Nome padronizado da comissão de processo seletivo do Programa
+nome_comissao <- nome_comissao
+
+```
+
+```{r echo=FALSE, warning=FALSE}
+
+###-------------------------------------------------- Preparação para as Análises
+# instala e/ou carrega pacotes
+if(!require(pacman)){install.packages("pacman"); library(pacman)}
+pacman::p_load(XML, stringr, knitr, dplyr, openxlsx, reshape2)
+
+encode_xml2 <- function(txt) {
+  txt %>%
+    str_replace_all("ã", "a") %>%
+    str_replace_all("á", "a") %>%
+    str_replace_all("à", "a") %>%
+    str_replace_all("ä", "a") %>%
+    str_replace_all("â", "a") %>%
+    
+    str_replace_all("Ã", "A") %>%
+    str_replace_all("Á", "A") %>%
+    str_replace_all("À", "A") %>%
+    str_replace_all("Ä", "A") %>%
+    str_replace_all("Â", "A") %>%
+
+    str_replace_all("é", "e") %>%
+    str_replace_all("ê", "e") %>%
+    str_replace_all("É", "E") %>%
+    str_replace_all("Ê", "E") %>%
+    
+    str_replace_all("í", "i") %>%
+    str_replace_all("Í", "I") %>%
+
+    str_replace_all("õ", "o") %>%
+    str_replace_all("ó", "o") %>%
+    str_replace_all("ö", "o") %>%
+    str_replace_all("ô", "o") %>%
+    
+    str_replace_all("Õ", "O") %>%
+    str_replace_all("Ó", "O") %>%
+    str_replace_all("Ö", "O") %>%
+    str_replace_all("Ô", "O") %>%
+    
+    str_replace_all("ú", "u") %>%
+    str_replace_all("ü", "u") %>%
+    str_replace_all("Ú", "U") %>%
+    str_replace_all("Ü", "U") %>%
+    
+    str_replace_all("ç", "c") %>%
+    str_replace_all("Ç", "C") %>%
+  
+    str_replace_all("ñ", "n") %>%
+    str_replace_all("Ñ", "N")
+}
+
+# fundamental para a pontuação de orientacoes
+nome_instituicao <- str_to_lower(encode_xml2(nome_instituicao))
+nome_curso <- str_to_lower(encode_xml2(nome_curso))
+
+# fundamental para a pontuação de artigos
+nome_area <- str_to_lower(encode_xml2(nome_area))
+
+# Qualis Periódicos - Sucupira
+qualis_periodicos <- read.xlsx(xlsx_qualis)
+names(qualis_periodicos) <- c("ISSN", "Titulo", "Area", "Estrato")
+qualis_periodicos$ISSN <- sub("-", "", qualis_periodicos$ISSN)
+qualis_periodicos$Titulo <- str_trim(str_to_lower(encode_xml2(qualis_periodicos$Titulo)))
+qualis_periodicos$Area <- str_trim(str_to_lower(encode_xml2(qualis_periodicos$Area)))
+
+# Qualis Livros - 
+qualis_livros <- read.xlsx(xlsx_qualis_livros)
+names(qualis_livros) <- c("Titulo", "ISBN", "Estrato")
+qualis_livros$ISBN <- str_trim(qualis_livros$ISBN)
+qualis_livros$Estrato <- str_trim(qualis_livros$Estrato)
+
+# Caminho onde estao sos arquivos lattes (xlm)
+#arq <- list.files("_Professores\\.")
+arq <- list.files(doce_cv, full.names = F, recursive = T)
+
+# carrega curriculos e monta tabela
+clattes <- data.frame(id = str_sub(arq, 1, 16), 
+                      nome    = rep("", length(arq)),
+                      data    = rep("", length(arq)),
+                      art     = rep(0, length(arq)),
+                      liv     = rep(0, length(arq)),
+                      tec     = rep(0, length(arq)),
+                      ori     = rep(0, length(arq)),
+                      ban     = rep(0, length(arq)),
+                      pro     = rep(0, length(arq)),
+                      ctc     = rep(0, length(arq)),
+                      dis     = rep(0, length(arq)),
+                      pdc     = rep(0, length(arq)),
+                      pve     = rep(0, length(arq)),
+                      prm     = rep(0, length(arq)),
+                      pev     = rep(0, length(arq)),
+                      linhasp = rep("", length(arq)),
+                      stringsAsFactors = FALSE
+)
+
+# cria arquivo DOcente com id, nome completo e nome em citacoes dos DOCENTE
+# id.doc <- list.files("_Professores", full.names = T, recursive = T)
+ id.doc <- list.files(doce_cv, full.names = T, recursive = T)
+  id.docente<-NULL
+  nome.docente<-NULL
+  doc.citacao<-NULL  
+    for(i in 1:length(id.doc)){
+    url <- unzip(id.doc[i])
+    f <- readLines("curriculo.xml", encoding="latin1")
+    f <- encode_xml2(f)
+    writeLines(f, "curriculo.xml")
+    f <- NULL
+    data <- xmlParse("curriculo.xml") 
+#    data <- xmlParse(f, encoding="ISO-8859-1") # Windows system encoding
+    xml_data <- xmlToList(data)
+    
+    # identificador do Lattes
+    id.docente <- c(id.docente, as.vector(xml_data$.attrs["NUMERO-IDENTIFICADOR"]))
+    # nome completo do discente
+    nome.docente <- c(nome.docente, encode_xml2(xml_data$"DADOS-GERAIS"$.attrs["NOME-COMPLETO"]))
+    # nome de citação do discente
+    doc.citacao <- c(doc.citacao,encode_xml2(xml_data$"DADOS-GERAIS"$.attrs["NOME-EM-CITACOES-BIBLIOGRAFICAS"]))
+    } 
+  doc.citacao<-strsplit(doc.citacao,";")
+  doc.citacao<-unlist(doc.citacao)
+  # arquivo com id, nome completo e nome em citacoes dos discentes
+  doc_id_cit<-c(id.docente, nome.docente, doc.citacao)
+  
+
+# cria arquivo DIscente com id, nome completo e nome em citacoes dos DISCENTES
+# id.dis <- list.files("_Discentes", full.names = T, recursive = T)
+ id.dis <- list.files(dice_cv, full.names = T, recursive = T)
+  id.discente<-NULL
+  nome.discente<-NULL
+  nome.citacao<-NULL  
+    for(i in 1:length(id.dis)){
+    url <- unzip(id.dis[i])
+    f <- readLines("curriculo.xml", encoding="latin1")
+    f <- encode_xml2(f)
+    writeLines(f, "curriculo.xml")
+    f <- NULL
+    data <- xmlParse("curriculo.xml") # , encoding="ISO-8859-1")
+    xml_data <- xmlToList(data)
+    
+    # identificador do Lattes
+    id.discente <- c(id.discente, as.vector(xml_data$.attrs["NUMERO-IDENTIFICADOR"]))
+    # nome completo do discente
+    nome.discente <- c(nome.discente, encode_xml2(xml_data$"DADOS-GERAIS"$.attrs["NOME-COMPLETO"]))
+    # nome de citação do discente
+    nome.citacao <- c(nome.citacao,encode_xml2(xml_data$"DADOS-GERAIS"$.attrs["NOME-EM-CITACOES-BIBLIOGRAFICAS"]))
+    } 
+  nome.citacao<-strsplit(nome.citacao,";")
+  nome.citacao<-unlist(nome.citacao)
+  # arquivo com id, nome completo e nome em citacoes dos discentes
+  dic_id_cit<-c(id.discente, nome.discente, nome.citacao)
+
+  
+```
+
+```{r echo=FALSE, warning=FALSE}
+
+###################################################################
+# CRIA DATA-FRAMES DE PONTUAÇÃO
+###################################################################
+producao_artigos     <- NULL # produção de artigos
+producao_livros      <- NULL # produção livros
+producao_tecnica     <- NULL # produção técnica
+producao_orientacoes <- NULL # orientações
+producao_bancas      <- NULL # bancas
+producao_projetos    <- NULL # projetos
+producao_coltec      <- NULL # colaboracao tecnica
+producao_disciplinas <- NULL # disciplinas
+producao_posdoc      <- NULL # pos-doc e livre-docencia
+producao_pvecd       <- NULL # prof. visitante e estagio de curta duracao
+producao_premio      <- NULL # premiacao
+producao_associada   <- NULL # producao associada aos projetos
+producao_tanais      <- NULL # producao em eventos
+
+source("ScriptsR\\linhas_pesquisa.R")
+source("ScriptsR\\artigos.R")
+source("ScriptsR\\livros.R")
+source("ScriptsR\\tecnica.R")
+source("ScriptsR\\orientacao.R")
+source("ScriptsR\\banca.R")
+source("ScriptsR\\projeto.R")
+source("ScriptsR\\colaboracao_tecnica.R")
+source("ScriptsR\\disciplina.R")
+source("ScriptsR\\posdoc.R")
+source("ScriptsR\\pvecd.R")
+source("ScriptsR\\premio.R")
+source("ScriptsR\\producao_associada.R")
+source("ScriptsR\\trab_anais.R")
+
+# loop para cada Lattes
+for(cl in 1:nrow(clattes)){
+
+  # leitura Lattes
+  url <- paste0(clattes[cl, "id"], ".zip")
+#  url <- unzip(paste0("_Professores\\",url))
+  url <- unzip(paste0(doce_cv,"\\",url))
+  
+  f <- readLines("curriculo.xml", encoding="latin1")
+  f <- encode_xml2(f)
+  writeLines(f, "curriculo.xml")
+  f <- NULL
+  
+#  data <- xmlParse("curriculo.xml", encoding="ISO-8859-1")
+  data <- xmlParse("curriculo.xml")
+  xml_data <- xmlToList(data)
+  
+  # identificador do Lattes
+  id <- as.vector(xml_data$.attrs["NUMERO-IDENTIFICADOR"])
+  # nome do professor
+  nome <- encode_xml2(xml_data$"DADOS-GERAIS"$.attrs["NOME-COMPLETO"])
+  clattes[cl, "nome"] = nome
+  
+  # arquivo com id, nome completo e nome em citacoes deste docente
+  citacao <- encode_xml2(xml_data$"DADOS-GERAIS"$.attrs["NOME-EM-CITACOES-BIBLIOGRAFICAS"])
+  citacao<-strsplit(citacao,";")
+  citacao<-unlist(citacao)
+  este_doc_id_cit<-c(id, nome, citacao)
+  
+    # data da atualização do Lattes
+  clattes[cl, "data"] = paste0(
+                str_sub(xml_data$.attrs["DATA-ATUALIZACAO"], 1, 2), "/",
+                str_sub(xml_data$.attrs["DATA-ATUALIZACAO"], 3, 4), "/",
+                str_sub(xml_data$.attrs["DATA-ATUALIZACAO"], 5, 8)
+  )
+
+
+  ###################################################################
+  # LINHAS DE PESQUISA
+  ###################################################################
+  clattes[cl, "linhasp"] <- linhas_pesquisa(xml_data, nome_instituicao)
+    
+  ###################################################################
+  # PRODUÇÃO BIBLIOGRAFICA - ARTIGOS
+  ###################################################################
+  producao_artigos <- rbind(producao_artigos, artigos(id, xml_data, pontos_artigo, dic_id_cit, qualis_periodicos, nome_area, encode_xml2, ano_ini, ano_fim))
+  clattes[cl, "art"] <- producao_artigos[producao_artigos$id == id & producao_artigos$equipe == "TOTAL", "pontos"]
+
+  ###################################################################
+  # PRODUÇÃO BIBLIOGRAFICA - LIVROS e CAPÍTULOS
+  ###################################################################
+  producao_livros <- rbind(producao_livros, livros(id, xml_data, qualis_livros, ano_ini, ano_fim, dic_id_cit, encode_xml2, pontos_livro))
+  clattes[cl, "liv"] <- producao_livros[producao_livros$id == id & producao_livros$equipe == "TOTAL", "pontos"]
+
+  ###################################################################
+  # PRODUÇÃO TÉCNICA
+  ###################################################################
+  producao_tecnica <- rbind(producao_tecnica,
+                            tecnica(id, xml_data, pontos_tec, 
+                                        qualis_periodicos, nome_area, ano_ini, ano_fim))
+  clattes[cl, "tec"] <- producao_tecnica[producao_tecnica$id == id & producao_tecnica$estrato == "TOTAL", "pontos"] 
+
+  ###################################################################
+  # ORIENTAÇÕES 
+  ###################################################################
+  producao_orientacoes <- rbind(producao_orientacoes,
+                              orientacao(id, xml_data, pontos_orientacao, nome_instituicao, nome_curso, ano_ini, ano_fim))
+  clattes[cl, "ori"] <- producao_orientacoes[producao_orientacoes$id == id & producao_orientacoes$instituicao == "TOTAL", "pontos"]
+
+  ###################################################################
+  # BANCAS
+  ###################################################################
+  producao_bancas <- rbind(producao_bancas,
+                              banca(id, xml_data, pontos_banca, nome_instituicao, nome_curso, nome_comissao, ano_ini, ano_fim))
+  clattes[cl, "ban"] <- producao_bancas[producao_bancas$id == id & producao_bancas$instituicao == "TOTAL", "pontos"]
+  
+  ###################################################################
+  # PROJETOS DE PESQUISA
+  ###################################################################
+  producao_projetos <- rbind(producao_projetos,
+                              projeto(id, xml_data, pontos_projeto, ano_ini, ano_fim))
+  clattes[cl, "pro"] <- producao_projetos[producao_projetos$id == id & producao_projetos$financiador == "TOTAL", "pontos"]
+  
+
+  ###################################################################
+  # COLABORAÇÃO TÉCNICA
+  ###################################################################
+  producao_coltec <- rbind(producao_coltec,
+                              coltec(id, xml_data, pontos_coltec, qualis_periodicos, nome_area, ano_ini, ano_fim))
+  clattes[cl, "ctc"] <- producao_coltec[producao_coltec$id == id & producao_coltec$instituicao == "TOTAL", "pontos"]
+  
+  
+  ###################################################################
+  # DISCIPLINAS
+  ###################################################################
+  producao_disciplinas <- rbind(producao_disciplinas,
+                          disciplina(id, xml_data, pontos_disciplina, nome_instituicao, nome_curso, ano_ini, ano_fim))
+  clattes[cl, "dis"] <- producao_disciplinas[producao_disciplinas$id == id & producao_disciplinas$curso == "TOTAL", "pontos"]
+
+###-----------------------------------------------------------------------inicio
+ ###################################################################
+  # POSDOC e LIVRE DOCENCIA
+  ###################################################################
+  producao_posdoc <- rbind(producao_posdoc, 
+                           posdoc(id, xml_data, pontos_posdoc, ano_ini, ano_fim))
+  clattes[cl, "pdc"] <- producao_posdoc[producao_posdoc$id == id & producao_posdoc$instituicao == "TOTAL", "pontos"]
+  ###############################
+  
+  ###################################################################
+  # PROF VISITANTE E ESTAGIO DE CURTA DURACAO
+  ###################################################################
+  producao_pvecd <- rbind(producao_pvecd, 
+                          pvecd(id, xml_data, pontos_pvecd, ano_ini, ano_fim))
+ clattes[cl, "pve"] <- producao_pvecd[producao_pvecd$id == id & producao_pvecd$vinculo == "TOTAL", "pontos"]
+ ##################################
+  
+  ###################################################################
+  # PREMIO
+  ###################################################################
+  producao_premio <- rbind(producao_premio, 
+                           premio(id, xml_data, pontos_premio, ano_ini, ano_fim))
+  clattes[cl, "prm"] <- producao_premio[producao_premio$id == id & producao_premio$titulo == "TOTAL", "pontos"]
+  ###############################
+    
+  ###################################################################
+  # PRDUCAO ASSOCIADA AOS PROJETOS DE PESQUISA
+  ###################################################################
+  producao_associada <- rbind(producao_associada, 
+                              prodass(id, xml_data, este_doc_id_cit, doc_id_cit, dic_id_cit, ano_ini, ano_fim))
+  ###############################
+  
+  ###################################################################
+  # PRODUCAO EM EVENTOS
+  ###################################################################
+  producao_tanais <- rbind(producao_tanais, 
+                              trab_anais(id, xml_data, pontos_anais, dic_id_cit, ano_ini, ano_fim))
+   clattes[cl, "pev"] <- producao_tanais[producao_tanais$id == id & producao_tanais$equipe == "TOTAL", "pontos"]
+
+  ###############################
+
+###--------------------------------------------------------------------------Fim
+}
+
+# data frames - retirar número da linha
+row.names(producao_artigos)     <- NULL
+row.names(producao_livros)      <- NULL
+row.names(producao_tecnica)     <- NULL
+row.names(producao_orientacoes) <- NULL
+row.names(producao_bancas)      <- NULL
+row.names(producao_projetos)    <- NULL
+row.names(producao_coltec)      <- NULL
+row.names(producao_disciplinas) <- NULL
+row.names(producao_posdoc)      <- NULL
+row.names(producao_pvecd)       <- NULL
+row.names(producao_premio)      <- NULL
+row.names(producao_associada)   <- NULL
+row.names(producao_tanais)      <- NULL
+
+clattes <- clattes %>% arrange(nome)
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+# http://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+
+df_lattes <- clattes[,c(1:15)] # Exclui a coluna das linhas de pesquisa (ainda não usada)
+df_lattesP <- df_lattes
+
+###--------------------------------------------------------------- id especifico
+# Para id específico - esconde o nome dos demais docentes no Resumo da Produção
+if(!is.null(id_especifico)) {
+  vfor <- (1:nrow(clattes))[clattes$id == id_especifico]
+
+  df_lattes$id <- rep("XXXXXX", nrow(clattes))
+  df_lattes$id[vfor] <- clattes$id[vfor]
+
+  df_lattes$nome <- rep("XXXXXX", nrow(clattes))
+  df_lattes$nome[vfor] <- clattes$nome[vfor]
+} else{
+  vfor <- 1:nrow(clattes)
+}
+###------------------------------------------------------ cabecalho do Relatorio
+cat(paste0("#### Instituição: ", nome_instituicao[1]))
+cat("\n\n\n")
+cat(paste0("#### Curso: ", nome_curso[1]))
+cat("\n\n\n")
+cat(paste0("#### Área: ", nome_area[1]))
+cat("\n\n\n")
+cat("\n\n\n")
+
+
+###--------------------------------------------------------- RESUMO DA PRODUÇÃO
+# http://material.curso-r.com/manip/
+
+cat("### RESUMO DA PRODUÇÃO DOCENTE")
+cat("\n\n\n")
+
+n_docentes <- nrow(clattes)
+
+###----------------------------------------------------- Publicacao COM discente
+# Artigos
+ar <- producao_artigos %>% 
+  select(id, nome, equipe, estrato_, ano) %>% 
+  filter(equipe == "Discente" & (ano %in% (ano_ini:ano_fim)))
+names(ar)[names(ar) == 'estrato_'] <- 'tipo'
+
+li<- producao_livros %>% 
+  select(id, nome, equipe, tipo, ano) %>% 
+  filter(equipe == "Discente" & (ano %in% (ano_ini:ano_fim)))
+
+li$tipo[li$tipo == "LIVRO_ORGANIZADO_OU_EDICAO"]<- "L"
+li$tipo[li$tipo == "LIVRO_PUBLICADO"]<- "L"
+li$tipo[li$tipo == "Capitulo de livro publicado"]<- "CL"
+
+# Artigos + Livros
+df<-bind_rows(ar,li)
+df<-arrange(df,nome)
+
+df <- df %>% 
+  group_by(id, nome, tipo) %>% 
+  summarise(n = n()) %>%
+  arrange(nome, as.character(tipo))
+df$tipo <- as.factor(str_trim(df$tipo))
+tipo <- as.character(levels(df$tipo))
+
+if(length(tipo) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(tipo)))
+  names(df2) <- c("id","nome", tipo)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$tipo)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório por tipo
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+  # inclui coluna para o somatório por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0))) 
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  df2[nrow(df2), 1] <- "QTD. PUBLICAÇÕES"
+  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. PUBLICAÇÕES", TOTAL=0))
+}
+
+###--------------------------------------------------- inicio Tabela INDICADORES 
+###----- cada indicador aparece ao final de cada item
+
+indicadores <- data.frame(indicador = "Índice de Publicação com Discente", 
+                              Total = df2[nrow(df2), ncol(df2)],
+                              Docente = df2[nrow(df2), ncol(df2)]/n_docentes)
+#  if("A1" %in% estratos){
+  if("A1" %in% names(df2)){
+      indicadores <- rbind(indicadores,
+                           data.frame(indicador = "Índice de Publicação Super Qualificada (Qualis A1) com Discente",
+                                      Total = df2[nrow(df2), 2],
+                                      Docente = df2[nrow(df2),2] / n_docentes))
+  }
+
+kable(df2, caption = paste0("Publicação COM DISCENTE por TIPO ", "(", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+###--------------------------------------------- Publicação com discente por ano
+# Artigos
+ar <- producao_artigos %>% 
+  select(id, nome, equipe, ano) %>% 
+  filter(equipe == "Discente" & (ano %in% (ano_ini:ano_fim)))
+
+li<- producao_livros %>% 
+  select(id, nome, equipe, ano) %>% 
+  filter(equipe == "Discente" & (ano %in% (ano_ini:ano_fim)))
+
+# Artigos + Livros
+#df<-inner_join(ar, li)
+df<-bind_rows(ar,li)
+df<-arrange(df,nome)
+
+df <- df %>% 
+  group_by(id, nome, ano) %>% 
+  summarise(n = n()) %>%
+  arrange(nome, as.character(ano))
+df$ano <- as.factor(str_trim(df$ano)) # remove espacos
+ano <- as.character(levels(df$ano))
+
+if(length(ano) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(ano)))
+  names(df2) <- c("id","nome", ano)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$ano)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório por ano
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+  # inclui coluna para o somatório por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0))) 
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  df2[nrow(df2), 1] <- "QTD. PUBLICAÇÕES"
+  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. PUBLICAÇÕES", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Publicação COM DISCENTE por ANO ", "(", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+###----------------------------------------------------- Publicação docente geral
+# Artigos
+ar <- producao_artigos %>% 
+  select(id, nome, equipe, estrato_, ano) %>% 
+  filter(ano %in% (ano_ini:ano_fim))
+names(ar)[names(ar) == 'estrato_'] <- 'tipo'
+
+li<- producao_livros %>% 
+  select(id, nome, equipe, tipo, ano) %>% 
+  filter(ano %in% (ano_ini:ano_fim))
+
+li$tipo[li$tipo == "LIVRO_ORGANIZADO_OU_EDICAO"]<- "L"
+li$tipo[li$tipo == "LIVRO_PUBLICADO"]<- "L"
+li$tipo[li$tipo == "Capitulo de livro publicado"]<- "CL"
+
+# Artigos + Livros
+df<-bind_rows(ar,li)
+df<-arrange(df,nome)
+
+df <- df %>% 
+  group_by(id, nome, tipo) %>% 
+  summarise(n = n()) %>%
+  arrange(nome, as.character(tipo))
+df$tipo <- as.factor(str_trim(df$tipo))
+tipo <- as.character(levels(df$tipo))
+
+if(length(tipo) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(tipo)))
+  names(df2) <- c("id","nome", tipo)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$tipo)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório por tipo
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+  # inclui coluna para o somatório por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0))) 
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  df2[nrow(df2), 1] <- "QTD. PUBLICAÇÕES"
+  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. PUBLICAÇÕES", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Publicação Docente por TIPO ", "(", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+### Publicação docente por ano
+# Artigos
+df.ar <- producao_artigos %>% 
+  select(id, nome, equipe, estrato_, ano) %>% 
+  filter(ano %in% (ano_ini:ano_fim))
+names(df.ar)[names(df.ar) == 'estrato_'] <- 'tipo'
+
+df.li<- producao_livros %>% 
+  select(id, nome, equipe, tipo, ano) %>% 
+  filter(ano %in% (ano_ini:ano_fim))
+
+df.li$tipo[li$tipo == "LIVRO_ORGANIZADO_OU_EDICAO"]<- "L"
+df.li$tipo[li$tipo == "LIVRO_PUBLICADO"]<- "L"
+df.li$tipo[li$tipo == "Capitulo de livro publicado"]<- "CL"
+
+# Artigos + Livros
+df.arli<-bind_rows(df.ar,df.li)
+df.arli<-arrange(df.arli,nome)
+  
+df <- df.arli %>% 
+  group_by(id, nome, ano) %>% 
+  summarise(n = n()) %>%
+  arrange(nome, as.character(ano))
+df$ano <- as.factor(str_trim(df$ano)) # remove espacos
+ano <- as.character(levels(df$ano))
+
+if(length(ano) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(ano)))
+  names(df2) <- c("id","nome", ano)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$ano)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório por ano
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+  # inclui coluna para o somatório por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0))) 
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  df2[nrow(df2), 1] <- "QTD. PUBLICAÇÕES"
+  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. PUBLICAÇÕES", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Publicação Docente por ANO ", "(", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+### indicador
+    indicadores <- rbind(indicadores,
+                         data.frame(indicador = "Índice de Publicação", 
+                              Total = df2[nrow(df2), ncol(df2)],
+                              Docente = df2[nrow(df2), ncol(df2)]/n_docentes))
+    if("A1" %in% tipo){
+      indicadores <- rbind(indicadores,
+                           data.frame(indicador = "Índice de Publicação Super Qualificada (Qualis A1)",
+                                      Total = df2[nrow(df2),2],
+                                      Docente = df2[nrow(df2),2]/n_docentes) )
+    }
+    
+
+
+###------------------------------------------------------- Publicacao em eventos
+df <- producao_tanais %>% 
+              select(id, equipe, natureza) %>% 
+              filter(equipe != 'TOTAL') %>% 
+              group_by(id, natureza) %>% 
+              summarise(n = n())  %>% 
+              arrange(id, as.character(natureza))
+
+natureza <- as.character(levels(as.factor(as.character(df$natureza))))
+
+# se houver alguma publicacao com estrato qualis
+if(length(natureza) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(natureza)))
+  names(df2) <- c("id","nome", natureza)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$natureza)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+ if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório por natureza
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)])))) 
+  df2[nrow(df2), 1] <- "QTD. PUBLICACAO EM EVENTOS"
+  
+  # inclui linha com a pontuação
+#  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)])) * pontos_anais(natureza) / 2)) # se for usar... ainda nao funciona...
+#  df2[nrow(df2), 1] <- "PONTUAÇÂO"
+
+  # inclui coluna para o somatório por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0))) 
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. PUBLICACOES EM EVENTOS", TOTAL=0))
+#  df2 <- rbind(df2, data.frame(nome="PONTUAÇÃO", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Produção Bibliográfica - trabalhos completos e resumos em eventos (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+###------------------------------------------------------------------------- PTT
+df <- producao_tecnica %>% 
+              select(id, PTT, ano) %>% 
+#  filter(PTT != "--" & (ano %in% (ano_ini:ano_fim))) %>%
+  filter(ano %in% (ano_ini:ano_fim)) %>%
+              group_by(id, PTT) %>% 
+              summarise(n = n()) %>%
+              arrange(id, as.character(PTT))
+
+PTT <- as.character(levels(as.factor(as.character(df$PTT))))
+
+# se houver alguma producao tecnica com PTT
+if(length(PTT) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(PTT)))
+  names(df2) <- c("id","nome", PTT)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$PTT)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório de prod. ténica por estrato
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+  # inclui coluna para o somatorio de p. tecnica por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOT"
+  
+  df2[nrow(df2), 1] <- "QTD. PTTs"
+
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. PTTs", TOTAL=0))
+}
+
+indicadores <- rbind(indicadores,
+                       data.frame(indicador = "Indicador de Produção Técnica", 
+                                  Total = df2[nrow(df2), ncol(df2)],
+                                  Docente = df2[nrow(df2), ncol(df2)]/n_docentes))
+
+kable(df2, caption = paste0("Produção Técnica ou Tecnológica (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+cat("– Não Classificado,	ArDI Artigo de Divulgação - Internacional,	ArDN	Artigo de Divulgação - Nacional, CForD Curso de Formação - Docente,	CForO	curso de Formação - Organizador, Edit	Editoria, Map	Mapas, MatDid	Material Didático, MidOr	Midia Social - Organizador, MidPa	Midia Social - Participante, OEI	Organizador de Evento Internacional, OEN	Organizador de Evento Nacional, Patent	Patente, PEPal	apresentação - Palestras, PEPos	Apresetação - Painel, RelTec Relatório Técnico")
+
+
+### Produção técnica POR ANO
+df <- producao_tecnica %>% 
+              select(id, ano) %>% 
+  filter(ano %in% (ano_ini:ano_fim)) %>%
+              group_by(id, ano) %>% 
+              summarise(n = n()) %>%
+              arrange(nome, as.character(ano))
+
+df$ano <- as.factor(str_trim(df$ano)) # remove espacos
+ano <- as.character(levels(df$ano))
+#ano <- as.character(levels(as.factor(as.character(df$ano))))
+
+if(length(ano) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(ano)))
+  names(df2) <- c("id","nome", ano)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$ano)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório de prod. ténica por estrato
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+  # inclui coluna para o somatorio de p. tecnica por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOT"
+  
+  df2[nrow(df2), 1] <- "QTD. PTTs"
+
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. PTTs", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Produção Técnica ou Tecnológica por Ano (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+####--------------------------------------------------------------- Orientações
+
+producao_orientacoes$nivel[producao_orientacoes$nivel == "orientacao-de-outra-natureza" | producao_orientacoes$nivel == "orientacao de outra natureza"] <- "tutoria"
+producao_orientacoes$nivel[producao_orientacoes$nivel == "iniciacao cientifica"] <- "ic"
+producao_orientacoes$nivel[producao_orientacoes$nivel == "trabalho de conclusao de curso de graduacao" | producao_orientacoes$nivel == "trabalho de conclusao de curso graduacao"] <- "tcc"
+producao_orientacoes$nivel[producao_orientacoes$nivel == "dissertacao de mestrado"] <- "dissertacao"
+producao_orientacoes$nivel[producao_orientacoes$nivel == "tese de doutorado"] <- "tese"
+producao_orientacoes$nivel[producao_orientacoes$nivel == "supervisao de pos-doutorado"] <- "pos-doc"
+
+# orientacoes por nivel
+df <- producao_orientacoes %>% 
+  select(id, nivel, situacao, ano, instituicao, curso) %>% 
+  filter(ano %in% ano_ini:ano_fim,
+         nivel %in% c('dissertacao', 'tese'), 
+         situacao %in% c("andamento"), 
+         instituicao %in% nome_instituicao, 
+         curso %in% nome_curso
+         ) %>%
+  group_by(id, nivel) %>%
+  summarise(n = n()) %>%
+  arrange(id, as.character(nivel))
+
+nivel <- as.character(levels(as.factor(as.character(df$nivel))))
+
+# se houver alguma producao no respectivo nivel
+if(length(nivel) > 0){
+  
+  # se houver alguma publicacao com estrato qualis
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(nivel)))
+  names(df2) <- c("id","nome",nivel)
+#  names(df2) <- c("id","nome","tutoria","ic","tcc","dissertacao","tese","pos-doc")
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$nivel)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+
+    # inclui linha para o somatório por nivel
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+#  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)])))) 
+#  df2[nrow(df2), 1] <- "QTD. ORIENTACOES"
+  
+  # inclui coluna para o somatorio do nivel por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  df2[nrow(df2), 1] <- "QTD. ORIENTACOES"
+#  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. ORIENTACOES", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Orientações em andamento no PPG por curso (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+indicadores <- rbind(indicadores,
+                       data.frame(indicador = "Indicador de Orientação de Dissertação (andamento)", 
+                                  Total = df2$dissertacao[nrow(df2)],
+                                  Docente = df2$dissertacao[nrow(df2)]/n_docentes))
+
+if(!is.null(df2$tese)) {
+indicadores <- rbind(indicadores,
+                       data.frame(indicador = "Indicador de Orientação de Tese (andamento)", 
+                                  Total = df2$tese[nrow(df2)],
+                                  Docente = df2$tese[nrow(df2)]/n_docentes))
+}
+
+####---------- Orientaçoes POR ANO
+df <- producao_orientacoes %>% 
+  select(id, ano, nivel, situacao, instituicao, curso) %>% 
+  filter(ano %in% ano_ini:ano_fim,
+         nivel %in% c('dissertacao', 'tese'), 
+         situacao %in% c("andamento"), 
+         instituicao %in% nome_instituicao, 
+         curso %in% nome_curso
+         ) %>%
+  group_by(id, ano) %>% 
+  summarise(n = n()) %>%
+  arrange(nome, as.character(ano))
+
+df$ano <- as.factor(str_trim(df$ano)) # remove espacos
+ano <- as.character(levels(df$ano))
+
+if(length(ano) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(ano)))
+  names(df2) <- c("id","nome", ano)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$ano)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório de prod. ténica por estrato
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+  # inclui coluna para o somatorio de p. tecnica por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOT"
+  
+  df2[nrow(df2), 1] <- "QTD. ORIENTAÇÂO"
+
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. ORIENTAÇÂO", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Orientações em andamento no PPG por Ano (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+
+###------------------------------------------------------- Defesas - Titulacoes
+df <- producao_orientacoes %>% 
+  select(id, nivel, situacao, ano, instituicao, curso) %>% 
+  filter(ano %in% ano_ini:ano_fim,
+         nivel %in% c('dissertacao', 'tese'),
+         situacao %in% c("concluida"), 
+         instituicao %in% nome_instituicao, 
+         curso %in% nome_curso
+         ) %>%
+  group_by(id, nivel) %>%
+  summarise(n = n()) %>%
+  arrange(id, as.character(nivel))
+
+nivel <- as.character(levels(as.factor(as.character(df$nivel))))
+
+# se houver alguma producao no respectivo nivel
+if(length(nivel) > 0){
+  
+  # se houver alguma publicacao com estrato qualis
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(nivel)))
+  names(df2) <- c("id","nome",nivel)
+
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$nivel)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+
+    # inclui linha para o somatório por nivel
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+#  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)])))) 
+#  df2[nrow(df2), 1] <- "QTD. ORIENTACOES"
+  
+  # inclui coluna para o somatorio do nivel por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  df2[nrow(df2), 1] <- "QTD. ORIENTACOES"
+#  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. ORIENTACOES", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Orientações concluídas no PPG por curso (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+indicadores <- rbind(indicadores,
+                       data.frame(indicador = "Indicador de Orientação de Dissertação (concluida)", 
+                                  Total = df2$dissertacao[nrow(df2)],
+                                  Docente = df2$dissertacao[nrow(df2)]/n_docentes))
+
+if(!is.null(df2$tese)) {
+indicadores <- rbind(indicadores,
+                       data.frame(indicador = "Indicador de Orientação de Tese (concluida)", 
+                                  Total = df2$tese[nrow(df2)],
+                                  Docente = df2$tese[nrow(df2)]/n_docentes))
+}
+
+
+###---------- Titulações POR ANO
+df <- producao_orientacoes %>% 
+  select(id, ano, nivel, situacao, instituicao, curso) %>% 
+  filter(ano %in% ano_ini:ano_fim,
+         nivel %in% c('dissertacao', 'tese'), 
+         situacao %in% c("concluida"), 
+         instituicao %in% nome_instituicao, 
+         curso %in% nome_curso
+         ) %>%
+  group_by(id, ano) %>% 
+  summarise(n = n()) %>%
+  arrange(nome, as.character(ano))
+
+df$ano <- as.factor(str_trim(df$ano)) # remove espacos
+ano <- as.character(levels(df$ano))
+
+if(length(ano) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(ano)))
+  names(df2) <- c("id","nome", ano)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$ano)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório de prod. ténica por estrato
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+  # inclui coluna para o somatorio de p. tecnica por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOT"
+  
+  df2[nrow(df2), 1] <- "QTD. ORIENTAÇÂO"
+
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. ORIENTAÇÂO", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Orientações concluídas no PPG por Ano (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+###----- Todas as orientacoes por nivel
+df <- producao_orientacoes %>% 
+#  select(id, nivel, situacao, ano) %>% 
+  select(id, nivel, ano) %>% 
+  filter(ano %in% ano_ini:ano_fim) %>%
+  group_by(id, nivel) %>%
+  summarise(n = n()) %>%
+  arrange(id, as.character(nivel))
+
+nivel <- as.character(levels(as.factor(as.character(df$nivel))))
+
+# se houver alguma producao no respectivo nivel
+if(length(nivel) > 0){
+  
+  # se houver alguma publicacao com estrato qualis
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(nivel)))
+#  names(df2) <- c("id","nome",nivel)
+  names(df2) <- c("id","nome","tutoria","ic","tcc","dissertacao","tese","pos-doc")
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$nivel)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+
+    # inclui linha para o somatório por nivel
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+#  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)])))) 
+#  df2[nrow(df2), 1] <- "QTD. ORIENTACOES"
+  
+  # inclui coluna para o somatorio do nivel por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  df2[nrow(df2), 1] <- "QTD. ORIENTACOES"
+#  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. ORIENTACOES", TOTAL=0))
+}
+
+kable(df2, caption = paste0("Todas as Orientações (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+####------------------------------------------------------- Projetos de pesquisa
+
+df <- producao_projetos %>% 
+              select(id, coordenador, financiado) %>% 
+              filter(coordenador != '', financiado != '') %>% 
+              group_by(id, coordenador, financiado) %>% 
+              summarise(n = n())
+
+df$cf<- paste0(df$coordenador," ", df$financiado)
+df$cf[df$cf == "NAO NAO"]<-"Participante sem_recurso"
+df$cf[df$cf == "NAO SIM"]<- "Participante com_recurso"
+df$cf[df$cf == "SIM NAO"]<- "Coordenador sem_recurso"
+df$cf[df$cf == "SIM SIM"]<- "Coordenador com_recurso"
+
+cf <- as.character(levels(as.factor(as.character(df$cf))))
+
+# se houver alguma publicacao com estrato qualis
+if(length(cf) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(cf)))
+  names(df2) <- c("id","nome", cf)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$cf)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+ if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório por natureza
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)])))) 
+  df2[nrow(df2), 1] <- "QTD. PROJETOS"
+  
+  # inclui coluna para o somatório por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0))) 
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. ORIENTACOES", TOTAL=0))
+}
+kable(df2, caption = paste0("Projetos de pesquisa (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+###-------------------------------------------------------------- Intercambio
+df <- producao_posdoc %>% 
+              select(id, instituicao) %>% 
+              filter(instituicao != 'TOTAL') %>% 
+              group_by(id) %>% 
+              summarise(n1 = n())
+
+df2 <- producao_pvecd %>% 
+              select(id, vinculo) %>% 
+              filter(vinculo != 'TOTAL') %>% 
+              group_by(id) %>% 
+              summarise(n2 = n())
+
+df <- as.data.frame(full_join(df,df2))
+df[is.na(df)]<-0
+df$TOTAL<-as.numeric(df$n1) + as.numeric(df$n2)
+df <- merge(df,clattes[, c('id','nome')])
+df <- df[,c('nome', 'TOTAL')]
+df <- df %>% arrange(nome)
+
+#soma.ind<-sum(as.numeric(df$TOTAL), na.rm = TRUE) / n_docentes
+ind.inter<- data.frame("Indicador de Intercambio", sum(as.numeric(df$TOTAL), na.rm = TRUE), sum(as.numeric(df$TOTAL), na.rm = TRUE) / n_docentes)
+names(ind.inter)<-c("indicador","Total", "Docente")
+indicadores <- rbind(indicadores,ind.inter)
+
+if(!is.null(id_especifico)){
+  df$nome[df$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+}
+
+df <- rbind(df, data.frame("nome" = "QTD. INTERCAMBIOS",  "TOTAL" = sum(as.numeric(df$TOTAL), na.rm = TRUE)))
+kable(df, caption = paste0("Docentes com Intercambio (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+###-------------------------------------------------------------------- Premios
+df <- producao_premio %>% 
+              select(id, titulo) %>% 
+              filter(titulo != 'TOTAL') %>% 
+              group_by(id) %>% 
+              summarise(TOTAL = n())
+
+df <- merge(df,clattes[, c('id','nome')])
+df <- df[,c('nome', 'TOTAL')]
+df <- df %>% arrange(nome)
+
+ind.inter<- data.frame("Indicador de Prêmios e distinções", sum(as.numeric(df$TOTAL),na.rm = TRUE), sum(as.numeric(df$TOTAL),na.rm = TRUE)/n_docentes)
+names(ind.inter)<-c("indicador","Total", "Docente")
+indicadores <- rbind(indicadores,ind.inter)
+
+if(!is.null(id_especifico)){
+  df$nome[df$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+}
+# cria a linha dos totais
+df <- rbind(df, data.frame(nome = "QTD.PREMIACÕES",  TOTAL = sum(as.numeric(df$TOTAL))))
+kable(df, caption = paste0("Docentes com premiacao (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+###---------------------------------------------------------- INDICADORES GERAIS
+
+cat("### INDICADORES GERAIS")
+cat("\n\n\n")
+
+# indicadores de orientação
+
+# Produção de teses e dissertações
+#df <- producao_orientacoes %>% 
+#              select(nivel, situacao, ano) %>% 
+#              filter(ano %in% (ano_ini:ano_fim),
+#                     nivel %in% c('dissertacao', 'tese', 'pos-doC')) %>%
+#              group_by(nivel, situacao) %>% 
+#              summarise(TOTAL = n())
+#
+
+#indicadores <- rbind(indicadores,
+#                     data.frame(indicador = "Indicador de Produção de Teses de Doutorado (concluida)", 
+#                                Total = sum(as.numeric(df[df$nivel == "tese" &
+#                                               df$situacao == "concluida", "TOTAL"]), na.rm = TRUE),
+#                                Docente = sum(as.numeric(df[df$nivel == "tese" &
+#                                               df$situacao == "concluida", "TOTAL"]), na.rm = TRUE)/n_docentes) )
+#
+# inserir linha com totais
+#df <- rbind(df, data.frame(tipo ="QTD. ORIENTACOES", nivel = "", situacao = "", TOTAL = sum(df$TOTAL)))
+#
+#kable(df, caption = paste0("Todas as orientações"," (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+
+
+####-------------
+#indicadores$Total <- round(indicadores$Total, 2)
+indicadores$Docente <- round(indicadores$Docente, 2)
+kable(indicadores, caption = paste0("Indicadores da produção (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+#cat("\n\n\n")
+
+###--------------------------------------------------------------------------
+###--------------------------------------------------------------------------
+###---------------------------------------------------------------- PONTUACAO
+
+###-------- tabela Pontuacao geral
+if(fl_pontuacaogeral){
+  kable(df_lattesP, caption = paste0("Pontuação Geral  (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+}
+
+###--------- tabela classificacao
+if(fl_classificacao){ # mostrar tabela de classificação
+  
+cat("### PONTUAÇÃO")
+cat("\n\n\n")
+cat("(utilizada APENAS como referência para o credenciamento de novos docentes)")
+cat("\n\n\n")
+cat("(ver ANEXO I da Norma de credenciamento)")
+cat("\n\n\n")
+cat("art Artigo,	liv	Livro, tec PTT,	ori	Orientação, ban	Bancas, pro	Projetos, ctc	Colaboração Técnica, dis	Disciplina, pdc	Pós-doc, pve	Prof. Visitante e Estágio de Curta Duração, prm	Premiação, pev Produção em Eventos")
+cat("\n\n\n")
+
+  df_lattes2 <- df_lattes
+  df_lattes2[is.na(df_lattes2)]
+  n <- nrow((df_lattes2))
+  # MODULO A
+  # producao bibliografica
+  df_lattes2$pbib <- df_lattes2$bib <- df_lattes2$art + df_lattes2$liv
+  for(i in 1:n){
+    if(df_lattes2$pbib[i] > 25) df_lattes2$pbib[i] <- 25
+  }
+  
+  # producao tecnica
+  df_lattes2$ptec <- df_lattes2$tec
+  for(i in 1:n){
+    if(df_lattes2$ptec[i] > 25) df_lattes2$ptec[i] <- 25
+  }
+  # MODULO B
+  # orientacoes
+  df_lattes2$porb <- df_lattes2$orb <- df_lattes2$ori + df_lattes2$ban
+  for(i in 1:n){
+    if(df_lattes2$porb[i] > 15) df_lattes2$porb[i] <- 15
+  }
+  # MODULO C
+  # projetos de pesquisa
+  df_lattes2$ppro <- df_lattes2$pro
+  for(i in 1:n){
+    if(df_lattes2$ppro[i] > 15) df_lattes2$ppro[i] <- 15
+  }
+  # MODULO D
+  # colaboracao tecnica
+  df_lattes2$pctc <- df_lattes2$ctc
+  for(i in 1:n){
+    if(df_lattes2$pctc[i] > 10) df_lattes2$pctc[i] <- 10
+  }
+  # MODULO E
+  # disciplina
+  df_lattes2$pdis <- df_lattes2$dis
+  for(i in 1:n){
+    if(df_lattes2$pdis[i] > 10) df_lattes2$pdis[i] <- 10
+  }
+  # MODULO F
+  # intercambio
+  df_lattes2$pint <- df_lattes2$int <- df_lattes2$pdc + df_lattes2$pve
+#  for(i in 1:n){
+#    if(df_lattes2$pint[i] > 10) df_lattes2$pint[i] <- 10
+#  }
+   # MODULO G
+  # premio
+  df_lattes2$pprm <- df_lattes2$prm
+#  for(i in 1:n){
+#    if(is.null(df_lattes2$pprm[i])) df_lattes2$pprm[i] <- 0 
+#    else if(df_lattes2$pprm[i] > 10) df_lattes2$pprm[i] <- 10
+# }
+  # producado evento
+  df_lattes2$ppev <- df_lattes2$pev
+  for(i in 1:n){
+    if(df_lattes2$ppev[i] > 25) df_lattes2$ppev[i] <- 25
+  }  
+  
+  # reorganiza as colunas
+  df_lattes2$art <- NULL
+  df_lattes2$liv <- NULL
+  df_lattes2$ori <- NULL
+  df_lattes2$ban <- NULL
+  df_lattes2$pdc <- NULL
+  df_lattes2$pve <- NULL
+#  df_lattes2 <- df_lattes2[, c(2,8,9,4,10,11,12,5,13,6,14,7,15)]
+  df_lattes2 <- df_lattes2[, c(2,8,9,4,10,11,12,5,13,6,14,7,15,16,17,18)]
+  df_lattes2$total  <- df_lattes2$bib + df_lattes2$tec + df_lattes2$orb + 
+                       df_lattes2$pro + df_lattes2$ctc + df_lattes2$dis +
+                     df_lattes2$int + df_lattes2$prm + df_lattes2$pev
+
+  df_lattes2$ptotal <df_lattes2$total          
+  
+  # classificacao em ordem decrescente de pontuacao,
+  # com desempate pela pontuacao total
+  if(colegiado){
+    df_lattes2 <- df_lattes2 %>% arrange(desc(ptotal), desc(total))
+    df_lattes2$class <- 1:nrow(df_lattes2)
+    numcol <- ncol(df_lattes2)
+    df_lattes2 <- df_lattes2[,c(numcol, 1:(numcol-1))]
+  } else {
+    df_lattes$total <- df_lattes$art + df_lattes$liv + df_lattes$tec + df_lattes$ori + 
+                       df_lattes$ban + df_lattes$pro + df_lattes$ctc + df_lattes$dis +
+                       df_lattes$pdc + df_lattes$pve + df_lattes$prm + df_lattes2$pev
+
+    df_lattes <- df_lattes %>% arrange(desc(total))
+    df_lattes$class <- 1:nrow(df_lattes)
+    df_lattes$id <- NULL
+    numcol <- ncol(df_lattes)
+    df_lattes <- df_lattes[,c(numcol, 1:(numcol-1))]
+  }
+
+###---------------------------- REMOVER QUANDO FINALIZADO
+# df_lattes$nome <- "XXXXXXXXXX"
+###----------------------------
+  if(colegiado){
+    kable(df_lattes2, caption = paste0("Classificação Geral - Colegiado (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+  } else {
+      kable(df_lattes, caption = paste0("Pontuação Geral por Tipo de Produção ou Atividade (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+  }
+  
+}
+
+####---------- tabela Pontuacao PTT
+if(fl_tecnica){
+df <- producao_tecnica %>% 
+              select(id, estrato, pontos, ano) %>% 
+              filter(estrato != 'TOTAL' & 
+                       (ano %in% (ano_ini:ano_fim))) %>% 
+              group_by(id, pontos, ano) %>% 
+              summarise(n = n()) %>%
+              arrange(id, as.character(id))
+df$tot<-df$pontos * df$n
+
+df <- df %>% 
+              group_by(id, ano) %>% 
+              summarise(tot_ano = sum(tot))
+
+estratos <- sort(as.character(levels(as.factor(as.character(df$estrato)))), decreasing = TRUE)
+ano <- as.character(levels(as.factor(as.character(df$ano))))
+
+# se houver alguma producao tecnica com estrato
+if(length(ano) > 0){
+
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(ano)))
+  names(df2) <- c("id","nome", ano)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$ano)] <- round(df[df$id == id, ]$tot_ano,2)
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+  # inclui linha para o somatório de prod. ténica por ano
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+#  # inclui linha com a pontuação
+#  df2 <- rbind(df2, round(c(0, colSums(cbind(df2[ , 2:ncol(df2)]),0) * pontos_tec(0, estratos) / 2), 0) ) 
+  
+# inclui coluna para o somatorio de p. tecnica por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+#  df2[nrow(df2) - 1, 1] <- "QTD. PTTs"
+  df2[nrow(df2), 1] <- "PONTUAÇÂO"
+  
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+#  df2 <- rbind(df2, data.frame(nome="QTD. PTTs", TOTAL=0))
+  df2 <- rbind(df2, data.frame(nome="PONTUAÇÃO", TOTAL=0))
+
+}
+
+kable(df2, caption = paste0("Pontuação PTT por Ano"," (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+}
+
+####------- tabela Pontuacao PTT (por tipo)
+if(fl_tecnica){
+df <- producao_tecnica %>% 
+              select(id, estrato, ano) %>% 
+              filter(estrato != 'TOTAL' & 
+                       (ano %in% (ano_ini:ano_fim))) %>% 
+              group_by(id, estrato) %>% 
+              summarise(n = n()) %>%
+              arrange(id, as.character(estrato))
+
+estratos <- sort(as.character(levels(as.factor(as.character(df$estrato)))), decreasing = TRUE)
+
+# se houver alguma producao tecnica com estrato
+if(length(estratos) > 0){
+  
+  df2 <- cbind(clattes[, c("id","nome")], matrix(0, nrow(clattes), length(estratos)))
+  names(df2) <- c("id","nome", estratos)
+  
+  for(id in df2$id){ # inclui contagem na tabela cruzada
+    df2[df2$id == id, as.character(df[df$id == id, ]$estrato)] <- df[df$id == id, ]$n
+  }
+  
+  df2 <- df2[order(df2$nome), 2:ncol(df2)] # ordena por nome
+  
+  if(!is.null(id_especifico)){
+    df2$nome[df2$nome != df_lattes$nome[vfor]] <- "XXXXXXXXXX"
+  }
+  
+# inclui linha para o somatório de prod. ténica por estrato
+  df2 <- rbind(df2, c(0, colSums(cbind(df2[ , 2:ncol(df2)],0)))) 
+  
+# inclui linha com a pontuação
+  df2 <- rbind(df2, round(c(0, colSums(cbind(df2[ , 2:ncol(df2)]),0) * pontos_tec(0, estratos) / 2), 0) ) 
+  
+# inclui coluna para o somatorio de p. tecnica por nome
+  df2 <- cbind(df2, rowSums(cbind(df2[ , 2:ncol(df2)],0)))
+  names(df2)[ncol(df2)] <- "TOTAL"
+  
+  df2[nrow(df2) - 1, 1] <- "QTD. PTTs"
+  df2[nrow(df2), 1] <- "PONTUAÇÂO"
+  
+#  indicadores <- rbind(indicadores,
+#                       data.frame(indicador = "Indicador de Produção Técnica", 
+#                                  valor = df2[nrow(df2) - 1, ncol(df2)]/n_docentes) )
+
+} else {
+  df2 <- data.frame(nome="----------", TOTAL=0)
+  df2 <- rbind(df2, data.frame(nome="QTD. PTTs", TOTAL=0))
+  df2 <- rbind(df2, data.frame(nome="PONTUAÇÃO", TOTAL=0))
+
+  indicadores <- data.frame(indicador = "Indicador de Produção Técnica", valor = 0)
+}
+
+###---------------------------- REMOVER QUANDO FINALIZADO
+ df2$nome <- "XXXXXXXXXX"
+###----------------------------
+
+kable(df2, caption = paste0("Pontuação PTT"," (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE)
+}
+
+####----------------------------------------------------------------------------
+####----------------------------------------------------------------------------
+####---------------------------- RELATORIO DETALHADO DA PRODUÇÃO DE CADA DOCENTE 
+
+cat("### RELATÓRIO POR DOCENTE")
+cat("\n\n\n")
+
+###------------------------------------ Destaque da Produçao (informada no Lattes)
+for(i in vfor){
+  # data,frame das producoes relevantes
+  dprl <- data.frame(ano=NULL, tipo=NULL, titulo=NULL, observacao=NULL)
+  
+  # producao de artigos
+  dfpa<-producao_artigos[producao_artigos$id == clattes[i, "id"] &
+                           !(producao_artigos$flag_relevancia=="SIM" &
+                             !(producao_artigos$ano %in% ano_ini:ano_fim)), 3:9]
+#                             !(producao_artigos$ano %in% ano_ini:ano_fim)), 3:11]
+  
+  # producao relevante de artigos
+  dprl_aux <- producao_artigos[producao_artigos$id == clattes[i, "id"] &
+                               producao_artigos$flag_relevancia=="SIM", 
+                               c("ano","titulo", "periodico","estrato_")]
+  if(nrow(dprl_aux) > 0){
+    dprl_aux$tipo <- "ARTIGO"
+    dprl_aux$observacao <- paste0("(",dprl_aux$estrato_,") - ", dprl_aux$periodico)
+   
+    dprl <- rbind(dprl, dprl_aux[,c("ano","tipo","titulo","observacao")]) 
+  }
+  
+  # producao de livros
+  dfpl <- producao_livros[producao_livros$id == clattes[i, "id"] &
+                           !(producao_livros$flag_relevancia=="SIM" &
+                             !(producao_livros$ano %in% ano_ini:ano_fim)), 3:10]
+#                             !(producao_livros$ano %in% ano_ini:ano_fim)), 3:11]
+
+  # producao relevante de livros
+  dprl_aux <- producao_livros[producao_livros$id == clattes[i, "id"] &
+                              producao_livros$flag_relevancia=="SIM", 
+                              c("ano","tipo","titulo", "editora", "estrato_")]
+  if(nrow(dprl_aux) > 0){
+    dprl_aux$observacao <- paste0("(",dprl_aux$estrato_,") - ", dprl_aux$editora)
+    dprl <- rbind(dprl, dprl_aux[,c("ano","tipo","titulo","observacao")]) 
+  }
+  
+  # producao tecnica
+  dftc <- producao_tecnica[producao_tecnica$id == clattes[i, "id"] &
+                           !(producao_tecnica$flag_relevancia=="SIM" &
+                             !(producao_tecnica$ano %in% ano_ini:ano_fim)), c(2:4)]
+#                             !(producao_tecnica$ano %in% ano_ini:ano_fim)), c(2:4,6:7)]
+  
+  # producao tecnica relevante
+  dprl_aux <- producao_tecnica[producao_tecnica$id == clattes[i, "id"] &
+                              producao_tecnica$flag_relevancia=="SIM", 
+                              c("ano","tipo","titulo", "estrato_")]
+  if(nrow(dprl_aux) > 0){
+    names(dprl_aux)[4] <- "observacao"
+    dprl <- rbind(dprl, dprl_aux[,c("ano","tipo","titulo","observacao")]) 
+  }
+  
+  # producao orientacao
+  dfor <- producao_orientacoes[producao_orientacoes$id == clattes[i, "id"] &
+                           !(producao_orientacoes$flag_relevancia=="SIM" &
+                             !(producao_orientacoes$ano %in% ano_ini:ano_fim)), 2:9] 
+#                             !(producao_orientacoes$ano %in% ano_ini:ano_fim)), 2:10] 
+  
+  # Tabela Orientaçoes POR ANO
+dforano<-dfor[1:nrow(dfor)-1,]
+dforano <- dforano %>% 
+  select(ano, nivel,situacao) %>% 
+  group_by(ano,nivel, situacao) %>% 
+  summarise(n = n()) 
+
+if(length(unique(dforano$ano)) >1) {
+dforano<-dforano %>% dcast(nivel*situacao ~ ano)
+dforano[is.na(dforano)]<-0
+dforano$Total<-rowSums(dforano[,3:length(dforano)])
+if (nrow(dforano) > 1) dforano<- rbind(dforano, c("", "TOTAL",colSums(dforano[,3:length(dforano)]))) 
+}
+ 
+
+# producao relevante de orientacoes
+  dprl_aux <- producao_orientacoes[producao_orientacoes$id == clattes[i, "id"] &
+                                   producao_orientacoes$flag_relevancia=="SIM", 
+                                   c("ano","tipo","titulo", "nivel")]
+  if(nrow(dprl_aux) > 0){
+    names(dprl_aux)[4] <- "observacao"
+    dprl <- rbind(dprl, dprl_aux[,c("ano","tipo","titulo","observacao")]) 
+  }
+  
+  if(nrow(dprl) == 0){
+    dprl <- data.frame(observacao="Não há produção relevante informada")
+  }
+  
+  # demais producoes
+  dfba <- producao_bancas[producao_bancas$id == clattes[i, "id"], 2:7]
+  dfpr <- producao_projetos[producao_projetos$id == clattes[i, "id"], 2:7]
+  dfct <- producao_coltec[producao_coltec$id == clattes[i, "id"], 2:4]
+  dfdi <- producao_disciplinas[producao_disciplinas$id == clattes[i, "id"], 2:9]
+  dfpd <- producao_posdoc[producao_posdoc$id == clattes[i, "id"], 2:5]  
+  dfpv <- producao_pvecd[producao_pvecd$id == clattes[i, "id"], 2:7]
+  dfpe <- producao_premio[producao_premio$id == clattes[i, "id"], 2:4]
+  dfpap<- producao_associada[producao_associada$id == clattes[i, "id"], 2:5]
+  dfpev<- producao_tanais[producao_tanais$id == clattes[i, "id"], c(2:6,8)]
+
+  
+  ###------------------------------------- Comando para impressao dos relatorios
+  cat(paste0("### ", clattes[i, "nome"]))
+  cat("\n\n\n")
+  cat(paste0("#### Identificador: ", clattes[i, "id"]))
+  cat("\n\n\n")
+  cat(paste0("#### Data de referência: ", clattes[i, "data"]))
+  cat("\n\n\n")
+  cat(paste0("##### Linhas de pesquisa: ", clattes[i, "linhasp"]))
+  cat("\n\n\n")
+  
+  print(kable(dprl, caption = "PRODUÇÃO RELEVANTE INFORMADA", format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+  
+  print(kable(dfpa, caption = paste0("Produção Bibliográfica - Artigos (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+
+  print(kable(dfpl, caption = paste0("Produção Bibliográfica - Livros e Capítulos (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+  
+  print(kable(dfpev, caption = paste0("Produção Bibliográfica - Trabalhos completos e resumos em eventos (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+
+  print(kable(dftc, caption = paste0("Produção Técnica (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+
+  print(kable(dfor, caption = paste0("Orientações (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")  
+
+  print(kable(dforano, caption = paste0("Orientações por Ano", " (", ano_ini, "-", ano_fim, ")"), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")  
+  
+  print(kable(dfba, caption = paste0("Bancas (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")  
+  
+  print(kable(dfpr, caption = paste0("Projetos de Pesquisa (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+  
+  print(kable(dfpap, caption = paste0("Produções associadas aos Projetos de Pesquisa (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+
+  print(kable(dfct, caption = paste0("Colaboração Técnica (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")  
+  
+  print(kable(dfdi, caption = paste0("Disciplinas ministradas (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n") 
+  
+  print(kable(dfpd, caption = paste0("Pós-doutorado e Livre docencia (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+  
+  print(kable(dfpv, caption = paste0("Professor visitante e Estagio de curta duracao (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+  
+  print(kable(dfpe, caption = paste0("Premios e distincoes (", ano_ini, "-", ano_fim, ")" ), format = "pandoc", row.names = FALSE))
+  cat("\n\n\n\n")
+}
+
+```
