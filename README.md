@@ -3,6 +3,7 @@ DoLa: Do Lattes para o PPG
 Extrai os dados de arquivos xml exportados pelo curriculo Lattes e elabora um relatório do periodo selecionado para o programa de pós-graduação (PPG). Elabora uma sintese por período e por curso (especialização - lato sensu, mestrado e doutorado - stricto sensu) da produção bibliográfica com e sem a participação de discentes, de trabalhos em eventos, da produção técnica ou tecnológica, das orientações em andamento e concluídas, dos projetos de pesquisa, dos intercâmbios (professor visitante, pós-doutorado ou afastamento de curta duração), das premiações e de indicadores gerais de atividades. Ao final, elabora um relatório detalhado para cada docente das informações acima e da participação em bancas, da produção associada aos projetos de pesquisa, das colaborações técnicas (comitê assessor, corpo editorial) e das disciplinas ministradas.
 
 Instruções:
+
 Para o nome da instituição e do PPG podem ser informados vários nomes concatenados, para garantir a correta extração das informações, uma vez que pode não haver uma padronização na escrita dos nomes no currículo dos diferentes docentes.
 
 O nome da área é usado para verificar se as publicações estão classificadas na Área de Avalição da Capes selecionada. Quando não estão são indicadas as áreas onde há a classificação.
