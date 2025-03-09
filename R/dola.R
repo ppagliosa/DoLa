@@ -48,7 +48,7 @@
 #' Os currículos dos docentes e discentes devem ser acessados pelos próprios
 #' pesquisadores na \href{https://lattes.cnpq.br/}{Plataforma Lattes}, acessando
 #' a aba "atualizar curriculo". Uma vez logado na plataforma, o arquivo no
-#' formato xlm (zipado) pode ser exportado acessando o
+#' formato xml (zipado) pode ser exportado acessando o
 #' "menu secundário - Exportar" (aba lateral).
 #'
 #' Os arquivos dos currículos dos docentes e dos discentes
@@ -70,7 +70,7 @@
 #' ser extraído e utilizado na Plataforma Sucupira.
 #' Assim, a fim de auxiliar no preenchimento da Plataforma Sucupira utilizando
 #' o máximo possível de informações constantes no curriculo Lattes, sugerimos
-#' seguir as orientações de preenchimenot constantes em Pagliosa e Nascimento (2020)
+#' seguir as orientações de preenchimento constantes em Pagliosa e Nascimento (2020)
 #' bem como o uso de algumas tags em campos específicos do
 #' curriculo Lattes para que estes possam ser corretamente identificados e extraídos.
 #' Da mesma forma, na seção do relatório detalhado por docente incluimos
