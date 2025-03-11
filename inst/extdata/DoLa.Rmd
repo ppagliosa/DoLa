@@ -185,12 +185,10 @@ for(cl in 1:length(id.doc)){
   clattes[cl, "linhasp"] <- linhas_pesquisa(xml_data, nome_instituicao)
     
   ###------------------------------------------------------------------- ARTIGOS
-#  producao_artigos <- rbind(producao_artigos, artigos(id, xml_data, pontos_artigo, dic_id_cit, qualis_periodicos, nome_area, encode_xml2, ano_ini, #ano_fim))
   producao_artigos <- rbind(producao_artigos, artigos(id, xml_data, dic_id_cit, qualis_periodicos, nome_area, encode_xml2, ano_ini, ano_fim))
   clattes[cl, "art"] <- producao_artigos[producao_artigos$id == id & producao_artigos$equipe == "TOTAL", "pontos"]
 
   ###-------------------------------------------------------- LIVROS e CAPÍTULOS
-#  producao_livros <- rbind(producao_livros, livros(id, xml_data, qualis_livros, ano_ini, ano_fim, dic_id_cit, encode_xml2, pontos_livro))
   producao_livros <- rbind(producao_livros, livros(id, xml_data, qualis_livros, ano_ini, ano_fim, dic_id_cit, encode_xml2))
   clattes[cl, "liv"] <- producao_livros[producao_livros$id == id & producao_livros$equipe == "TOTAL", "pontos"]
 
@@ -200,15 +198,11 @@ for(cl in 1:length(id.doc)){
   clattes[cl, "tec"] <- producao_tecnica[producao_tecnica$id == id & producao_tecnica$estrato == "TOTAL", "pontos"] 
 
   ###--------------------------------------------------------------- ORIENTAÇÕES
-#  producao_orientacoes <- rbind(producao_orientacoes,
-#                              orientacao(id, xml_data, pontos_orientacao, nome_instituicao, nome_ppg, ano_ini, ano_fim))
   producao_orientacoes <- rbind(producao_orientacoes,
                               orientacao(id, xml_data, nome_instituicao, nome_ppg, ano_ini, ano_fim))
   clattes[cl, "ori"] <- producao_orientacoes[producao_orientacoes$id == id & producao_orientacoes$instituicao == "TOTAL", "pontos"]
 
   ###-------------------------------------------------------------------- BANCAS
-#  producao_bancas <- rbind(producao_bancas,
-#                              banca(id, xml_data, pontos_banca, nome_instituicao, nome_ppg, ano_ini, ano_fim))
   producao_bancas <- rbind(producao_bancas,
                               banca(id, xml_data, nome_instituicao, nome_ppg, ano_ini, ano_fim))
   clattes[cl, "ban"] <- producao_bancas[producao_bancas$id == id & producao_bancas$instituicao == "TOTAL", "pontos"]
@@ -219,15 +213,11 @@ for(cl in 1:length(id.doc)){
   clattes[cl, "pro"] <- producao_projetos[producao_projetos$id == id & producao_projetos$financiador == "TOTAL", "pontos"]
   
   ###------------------------------------------------------- COLABORAÇÃO TÉCNICA
-#  producao_coltec <- rbind(producao_coltec,
-#                              coltec(id, xml_data, pontos_coltec, qualis_periodicos, nome_area, ano_ini, ano_fim))
   producao_coltec <- rbind(producao_coltec,
                               coltec(id, xml_data, qualis_periodicos, nome_area, ano_ini, ano_fim))
   clattes[cl, "ctc"] <- producao_coltec[producao_coltec$id == id & producao_coltec$instituicao == "TOTAL", "pontos"]
   
   ###--------------------------------------------------------------- DISCIPLINAS
-#  producao_disciplinas <- rbind(producao_disciplinas,
-#                          disciplina(id, xml_data, pontos_disciplina, nome_instituicao, nome_ppg, ano_ini, ano_fim))
   producao_disciplinas <- rbind(producao_disciplinas,
                           disciplina(id, xml_data, nome_instituicao, nome_ppg, ano_ini, ano_fim))
   clattes[cl, "dis"] <- producao_disciplinas[producao_disciplinas$id == id & producao_disciplinas$curso == "TOTAL", "pontos"]
