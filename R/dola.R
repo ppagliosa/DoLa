@@ -58,7 +58,7 @@
 #' nome completo, ou do nome em citações dos discentes. Para a correta identificação
 #' dos discentes, sugere-se manter atualizada a lista de autores citados no
 #' curriculo Lattes, bem como a identificação dos co-autores (ambos presentes
-#' no Menu Secundário da página inicial de atualização do curriculo Lattes.
+#' no Menu Secundário da página inicial de atualização do curriculo Lattes).
 #'
 #' Como há divergências na padronização das informações entre
 #' a Plataforma Sucupira (CAPES) e o Curriculo Lattes (CNPq), algumas
@@ -80,11 +80,14 @@
 #' @returns
 #' Retorna um \code{documento html} contendo tabelas de infomação.
 #'
-#' @author Paulo Pagliosa \email{paulo.pagliosa@ufsc.br}
+#' @author
+#' Paulo Pagliosa \email{paulo.pagliosa@ufsc.br}
+#'
+#' Fabiano Peruzzo Schwartz \email{fabiano.schwartz@camara.leg.br}
 #'
 #' @references
-#' Pagliosa, P.R.; Nascimento, P.O. 2021. \emph{Manual de Preenchimento do
-#' Currículo Lattes: com ênfase na área de Geociências da CAPES}. 57p. ####  LINK!!!!!!!
+#' Pagliosa, P.R.; Nascimento, P.O. 2021. \href{https://repositorio.ufsc.br/bitstream/handle/123456789/231602/ManualLattesGeociencias11_2021_versaobeta%20%281%29.pdf?sequence=1&isAllowed=y}{Manual de Preenchimento do
+#' Currículo Lattes: com ênfase na área de Geociências da CAPES}. 57p.
 #'
 #' @examples
 #' # exemplo do relatório produzido:
