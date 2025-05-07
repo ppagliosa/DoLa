@@ -4,11 +4,17 @@ Extrai os dados de arquivos xml exportados pelo curriculo Lattes e elabora um re
 
 Instruções:
 
-Para o nome da instituição e do PPG podem ser informados vários nomes concatenados, para garantir a correta extração das informações, uma vez que pode não haver uma padronização na escrita dos nomes no currículo dos diferentes docentes.
+#' Para o nome da instituição e do PPG podem ser informados vários nomes concatenados,
+#' para garantir a correta extração das informações, uma vez que pode não haver uma
+#' padronização na escrita dos nomes no currículo dos diferentes docentes.
+#'
+#' O nome da área é usado para verificar se as publicações estão
+#' classificadas na Área de Avaliação da Capes selecionada.
+#' Quando não estão são indicadas as áreas onde há a classificação.
+#'
+#' O arquivo xlsx Qualis Periódicos pode ser acessado na
+#' \href{https://sucupira-legado.capes.gov.br/sucupira/public/consultas/coleta/veiculoPublicacaoQualis/listaConsultaGeralPeriodicos.jsf}{Plataforma Sucupira}.
 
-O nome da área é usado para verificar se as publicações estão classificadas na Área de Avalição da Capes selecionada. Quando não estão são indicadas as áreas onde há a classificação.
-
-O arquivo xlsx Qualis Periódicos pode ser acessado na Plataforma Sucupira.
 
 O arquivo xlsx Qualis Livros pode ser acessado na página das Áreas de Avaliação da CAPES. Caso não esteja lá, solicite a coordenação de Área para que disponilize o documento público. Como não há uma padronização única para os arquivos com as informações sobre o Qualis Livros, o arquivo deve ser configurado para conter, no mínimo, as colunas com os seguintes nomes: "Titulo", "ISBN" e "Estrato". O carregamento desse arquivo é facultativo.
 
