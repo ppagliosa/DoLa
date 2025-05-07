@@ -4,7 +4,7 @@ Title: DoLa: Do Lattes para o PPG
 Version: 0.1.0
 Date: 2024-11-17
 Author: Paulo Pagliosa
-Maintainer: Paulo Pagliosa <paulo.pagliosaf@ufsc.br>
+Maintainer: Paulo Pagliosa <paulo.pagliosa@ufsc.br>
 Description: Auxilia na gestão dos Programas de Pós-graduação e no 
     preenchimento da Plataforma Sucupira por meio da extração de 
     informações do Currículo Lattes. 
