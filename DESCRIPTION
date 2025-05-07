@@ -7,7 +7,7 @@ Author: Paulo Pagliosa
 Maintainer: Paulo Pagliosa <paulo.pagliosaf@ufsc.br>
 Description: Auxilia na gestão dos Programas de Pós-graduação e no 
     preenchimento da Plataforma Sucupira por meio da extração de 
-    informações do Curriculo Lattes. 
+    informações do Currículo Lattes. 
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
@@ -34,3 +34,6 @@ Imports: XML, stringr, knitr, dplyr, reshape2, openxlsx, rmarkdown, utils
 URL: https://github.com/ppagliosa/DoLa
 BugReports: https://github.com/ppagliosa/DoLa
 Language: pt
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

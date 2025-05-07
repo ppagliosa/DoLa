@@ -18,19 +18,19 @@ dola(ano_ini, ano_fim, nome_instituicao, nome_ppg, nome_area, xlsx_qualis,
 
 \item{nome_area}{nome da Área de Avaliação do PPG na CAPES.}
 
-\item{xlsx_qualis}{nome do arquivo excel com a classificação Qualis Periódicos CAPES.}
+\item{xlsx_qualis}{nome do arquivo Excel com a classificação Qualis Periódicos CAPES.}
 
-\item{xlsx_qualis_livros}{nome do arquivo excel com a classificação Qualis Livros CAPES.}
+\item{xlsx_qualis_livros}{nome do arquivo Excel com a classificação Qualis Livros CAPES.}
 
-\item{cv_docentes}{diretório com os curriculos Lattes dos Docentes do PPG (arquivos xml zipados)}
+\item{cv_docentes}{diretório com os currículos Lattes dos Docentes do PPG (arquivos xml zipados)}
 
-\item{cv_discentes}{diretório com os curriculos Lattes dos Discentes do PPG (arquivos xml zipados)}
+\item{cv_discentes}{diretório com os currículos Lattes dos Discentes do PPG (arquivos xml zipados)}
 }
 \value{
-Retorna um \code{documento html} contendo tabelas de infomação.
+Retorna um \code{documento html} contendo tabelas de informação.
 }
 \description{
-Extrai os dados de arquivos xml exportados pelo curriculo Lattes
+Extrai os dados de arquivos xml exportados pelo currículo Lattes
 e elabora um relatório do periodo selecionado para o programa de pós-graduação (PPG).
 Elabora uma sintese por período e por curso (especialização - lato sensu,
 mestrado e doutorado - stricto sensu) da produção bibliográfica com e sem
@@ -49,7 +49,7 @@ para garantir a correta extração das informações, uma vez que pode não have
 padronização na escrita dos nomes no currículo dos diferentes docentes.
 
 O nome da área é usado para verificar se as publicações estão
-classificadas na Área de Avalição da Capes selecionada.
+classificadas na Área de Avaliação da Capes selecionada.
 Quando não estão são indicadas as áreas onde há a classificação.
 
 O arquivo xlsx Qualis Periódicos pode ser acessado na
@@ -58,7 +58,7 @@ O arquivo xlsx Qualis Periódicos pode ser acessado na
 O arquivo xlsx Qualis Livros pode ser acessado na página das
 \href{https://www.gov.br/capes/pt-br/acesso-a-informacao/acoes-e-programas/avaliacao/sobre-a-avaliacao/areas-avaliacao/sobre-as-areas-de-avaliacao/sobre-as-areas-de-avaliacao}{Áreas de Avaliação da CAPES}.
 Caso não esteja lá, solicite a coordenação de Área
-para que disponilize o documento público. Como não há uma padronização única
+para que disponibilize o documento público. Como não há uma padronização única
 para os arquivos com as informações sobre o Qualis Livros,
 o arquivo deve ser configurado para conter, no mínimo, as colunas com os
 seguintes nomes: "Titulo", "ISBN" e "Estrato". O carregamento desse arquivo
@@ -66,7 +66,7 @@ seguintes nomes: "Titulo", "ISBN" e "Estrato". O carregamento desse arquivo
 
 Os currículos dos docentes e discentes devem ser acessados pelos próprios
 pesquisadores na \href{https://lattes.cnpq.br/}{Plataforma Lattes}, acessando
-a aba "atualizar curriculo". Uma vez logado na plataforma, o arquivo no
+a aba "atualizar currículo". Uma vez logado na plataforma, o arquivo no
 formato xml (zipado) pode ser exportado acessando o
 "menu secundário - Exportar" (aba lateral).
 
@@ -76,23 +76,23 @@ Os currículos dos discentes são utilizados
 para identificar as publicações com discente, a partir do id Lattes, do
 nome completo, ou do nome em citações dos discentes. Para a correta identificação
 dos discentes, sugere-se manter atualizada a lista de autores citados no
-curriculo Lattes, bem como a identificação dos co-autores (ambos presentes
-no Menu Secundário da página inicial de atualização do curriculo Lattes).
+currículo Lattes, bem como a identificação dos co-autores (ambos presentes
+no Menu Secundário da página inicial de atualização do currículo Lattes).
 
 Como há divergências na padronização das informações entre
-a Plataforma Sucupira (CAPES) e o Curriculo Lattes (CNPq), algumas
+a Plataforma Sucupira (CAPES) e o Currículo Lattes (CNPq), algumas
 informações estão em campos distintos com nomes distintos nas duas plataformas.
 De modo semelhante, algumas informações podem ser colocadas em diferentes campos do
-curriculo Lattes, a depender da interpretação do docente ou mesmo de uma certa
+currículo Lattes, a depender da interpretação do docente ou mesmo de uma certa
 tradição da área de pesquisa. Outras informações podem ainda ser alimentadas na
 Plataforma Lattes mas não há identificador específico (tag) para que este possa
 ser extraído e utilizado na Plataforma Sucupira.
 Assim, a fim de auxiliar no preenchimento da Plataforma Sucupira utilizando
-o máximo possível de informações constantes no curriculo Lattes, sugerimos
+o máximo possível de informações constantes no currículo Lattes, sugerimos
 seguir as orientações de preenchimento constantes em Pagliosa e Nascimento (2020)
 bem como o uso de algumas tags em campos específicos do
-curriculo Lattes para que estes possam ser corretamente identificados e extraídos.
-Da mesma forma, na seção do relatório detalhado por docente incluimos
+currículo Lattes para que estes possam ser corretamente identificados e extraídos.
+Da mesma forma, na seção do relatório detalhado por docente incluímos
 a classificação das atividades de acordo com os nomes utilizados
 na Plataforma Sucupira.
 }
