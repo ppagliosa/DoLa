@@ -3,7 +3,14 @@ Type: Package
 Title: DoLa: Do Lattes para o PPG
 Version: 0.1.0
 Date: 2024-11-17
-Author: Paulo Pagliosa
+Authors@R: c(person(given = "Paulo", family = "Pagliosa",
+                    role = c("aut", "cre"),
+                    email = "paulo.pagliosa@ufsc.br",
+                    comment = c(ORCID = "0000-0003-0834-2534")),
+             person(given = "Fabiano Peruzzo", family = "Schwartz",
+                    role = "aut",
+                    email = "fabiano.schwartz@camara.leg.br",
+                    comment = c(ORCID = "0000-0003-1727-9346")))
 Maintainer: Paulo Pagliosa <paulo.pagliosa@ufsc.br>
 Description: Auxilia na gestão dos Programas de Pós-graduação e no 
     preenchimento da Plataforma Sucupira por meio da extração de 
@@ -32,7 +39,7 @@ Collate:
     'dola.R'
 Imports: XML, stringr, knitr, dplyr, reshape2, openxlsx, rmarkdown, utils
 URL: https://github.com/ppagliosa/DoLa
-BugReports: https://github.com/ppagliosa/DoLa
+BugReports: https://github.com/ppagliosa/DoLa/issues
 Language: pt
 Suggests: 
     testthat (>= 3.0.0)
