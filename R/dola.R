@@ -1,4 +1,4 @@
-#' @title DoLa: Do Lattes para o PPG
+#' @title Do Currículo Lattes Para o Programa de Pós-Graduação
 #'
 #' @description
 #' Extrai os dados de arquivos xml exportados pelo currículo Lattes

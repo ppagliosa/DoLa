@@ -2,7 +2,7 @@
 % Please edit documentation in R/dola.R
 \name{dola}
 \alias{dola}
-\title{DoLa: Do Lattes para o PPG}
+\title{Do Currículo Lattes Para o Programa de Pós-Graduação}
 \usage{
 dola(ano_ini, ano_fim, nome_instituicao, nome_ppg, nome_area, xlsx_qualis,
   xlsx_qualis_livros = NULL, cv_docentes, cv_discentes)
