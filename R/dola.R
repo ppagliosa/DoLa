@@ -126,20 +126,23 @@ dola<- function(ano_ini,
                 ano_fim,
                 nome_instituicao,
                 nome_ppg,
+
                 nome_area,
                 xlsx_qualis,
                 xlsx_qualis_livros = NULL,
                 cv_docentes,
                 cv_discentes) {
-  wd<-getwd()
-  dl<-system.file("extdata","DoLa.Rmd", package="DoLa")
-  rmarkdown::render(input = dl,
-                    output_format = "html_document",
-                    output_dir = wd,
-                    output_file = "DoLa.html",
-                    knit_root_dir = wd,
-                    envir = new.env())
-  browseURL("DoLa.html")
+  if(interactive()) {
+    wd<-getwd()
+    dl<-system.file("extdata","DoLa.Rmd", package="DoLa")
+    rmarkdown::render(input = dl,
+                      output_format = "html_document",
+                      output_dir = wd,
+                      output_file = "DoLa.html",
+                      knit_root_dir = wd,
+                      envir = new.env())
+    browseURL("DoLa.html")
+  }
 }
 
 
