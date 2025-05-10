@@ -98,7 +98,9 @@ na Plataforma Sucupira.
 }
 \examples{
 # exemplo do relatório produzido:
-browseURL(system.file("extdata","DoLa_exemplo.html", package="DoLa"))
+file.copy(from = paste0(system.file("extdata",package="DoLa"),"/DoLa_exemplo.pdf"),
+to   = paste0(wd,"/DoLa_exemplo.pdf"), overwrite = T)
+cat("\n", "*** Abra o arquivo <DoLa_exemplo.pdf> salvo no seu diretório para visualizar o exemplo de relatório ***","\n", sep = "")
 
 
 }

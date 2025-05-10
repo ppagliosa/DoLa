@@ -91,7 +91,9 @@
 #'
 #' @examples
 #' # exemplo do relatório produzido:
-#' browseURL(system.file("extdata","DoLa_exemplo.html", package="DoLa"))
+#' file.copy(from = paste0(system.file("extdata",package="DoLa"),"/DoLa_exemplo.pdf"),
+#' to   = paste0(wd,"/DoLa_exemplo.pdf"), overwrite = T)
+#' cat("\n", "*** Abra o arquivo <DoLa_exemplo.pdf> salvo no seu diretório para visualizar o exemplo de relatório ***","\n", sep = "")
 #'
 #'
 #' @import XML
@@ -102,7 +104,6 @@
 #' @import openxlsx
 #' @import rmarkdown
 #' @import utils
-#'
 #'
 #' @include artigos.R
 #' @include banca.R
@@ -126,13 +127,11 @@ dola<- function(ano_ini,
                 ano_fim,
                 nome_instituicao,
                 nome_ppg,
-
                 nome_area,
                 xlsx_qualis,
                 xlsx_qualis_livros = NULL,
                 cv_docentes,
                 cv_discentes) {
-  if(interactive()) {
     wd<-getwd()
     dl<-system.file("extdata","DoLa.Rmd", package="DoLa")
     rmarkdown::render(input = dl,
@@ -141,8 +140,9 @@ dola<- function(ano_ini,
                       output_file = "DoLa.html",
                       knit_root_dir = wd,
                       envir = new.env())
-    browseURL("DoLa.html")
-  }
+
+    cat("\n", "*** Abra o arquivo <DoLa.html> salvo no seu diretório para visualizar o relatório ***","\n", sep = "")
 }
+
 
 
