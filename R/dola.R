@@ -89,12 +89,6 @@
 #' Pagliosa, P.R.; Nascimento, P.O. 2021. \href{https://repositorio.ufsc.br/bitstream/handle/123456789/231602/ManualLattesGeociencias11_2021_versaobeta%20%281%29.pdf?sequence=1&isAllowed=y}{Manual de Preenchimento do
 #' Currículo Lattes: com ênfase na área de Geociências da CAPES}. 57p.
 #'
-#' @examples
-#' # exemplo do relatório produzido:
-#' file.copy(from = paste0(system.file("extdata",package="DoLa"),"/DoLa_exemplo.pdf"),
-#' to   = paste0(wd,"/DoLa_exemplo.pdf"), overwrite = T)
-#' cat("\n", "*** Abra o arquivo <DoLa_exemplo.pdf> salvo no seu diretório para visualizar o exemplo de relatório ***","\n", sep = "")
-#'
 #'
 #' @import XML
 #' @import stringr
@@ -141,7 +135,7 @@ dola<- function(ano_ini,
                       knit_root_dir = wd,
                       envir = new.env())
 
-    cat("\n", "*** Abra o arquivo <DoLa.html> salvo no seu diretório para visualizar o relatório ***","\n", sep = "")
+    cat("\n", "*** Abra o arquivo <DoLa.html> salvo no seu diretorio para visualizar o relatorio ***","\n", sep = "")
 }
 
 
