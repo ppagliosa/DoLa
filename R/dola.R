@@ -89,6 +89,17 @@
 #' Pagliosa, P.R.; Nascimento, P.O. 2021. \href{https://repositorio.ufsc.br/bitstream/handle/123456789/231602/ManualLattesGeociencias11_2021_versaobeta%20%281%29.pdf?sequence=1&isAllowed=y}{Manual de Preenchimento do
 #' Currículo Lattes: com ênfase na área de Geociências da CAPES}. 57p.
 #'
+#' @examples
+#' \dontrun{
+#' DoLa::dola(ano_ini = 2019, ano_fim = 2024,
+#' nome_instituicao = c("Universidade Federal de Santa Catarina"),
+#' nome_ppg = c("Programa de Pós-graduação em Oceanografia","oceanografia"),
+#' nome_area = c("Geociências"),
+#' xlsx_qualis = system.file("extdata","Qualis.xlsx", package="DoLa"),
+#' xlsx_qualis_livros = "QualisLivros_Capes2013_2016.xlsx",
+#' cv_docentes = system.file("extdata","cv_do", package="DoLa"),
+#' cv_discentes = system.file("extdata","cv_di", package="DoLa"))}
+#'
 #'
 #' @import XML
 #' @import stringr
@@ -130,13 +141,12 @@ dola<- function(ano_ini,
     dl<-system.file("extdata","DoLa.Rmd", package="DoLa")
     rmarkdown::render(input = dl,
                       output_format = "html_document",
-                      output_dir = wd,
                       output_file = "DoLa.html",
+                      output_dir = wd,
                       knit_root_dir = wd,
-                      envir = new.env())
+                      envir = new.env(),
+                      run_pandoc = T)
 
-    cat("\n", "*** Abra o arquivo <DoLa.html> salvo no seu diretorio para visualizar o relatorio ***","\n", sep = "")
+ if(file.exists("DoLa.html")) message("Abra o arquivo 'DoLa.html' salvo no seu diretorio para visualizar o relatorio.")
+ if(!file.exists("DoLa.html")) message("Verifique seus dados. Algo saiu errado.")
 }
-
-
-

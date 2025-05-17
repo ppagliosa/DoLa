@@ -96,6 +96,19 @@ Da mesma forma, na seção do relatório detalhado por docente incluímos
 a classificação das atividades de acordo com os nomes utilizados
 na Plataforma Sucupira.
 }
+\examples{
+\dontrun{
+DoLa::dola(ano_ini = 2019, ano_fim = 2024,
+nome_instituicao = c("Universidade Federal de Santa Catarina"),
+nome_ppg = c("Programa de Pós-graduação em Oceanografia","oceanografia"),
+nome_area = c("Geociências"),
+xlsx_qualis = system.file("extdata","Qualis.xlsx", package="DoLa"),
+xlsx_qualis_livros = "QualisLivros_Capes2013_2016.xlsx",
+cv_docentes = system.file("extdata","cv_do", package="DoLa"),
+cv_discentes = system.file("extdata","cv_di", package="DoLa"))}
+
+
+}
 \references{
 Pagliosa, P.R.; Nascimento, P.O. 2021. \href{https://repositorio.ufsc.br/bitstream/handle/123456789/231602/ManualLattesGeociencias11_2021_versaobeta\%20\%281\%29.pdf?sequence=1&isAllowed=y}{Manual de Preenchimento do
 Currículo Lattes: com ênfase na área de Geociências da CAPES}. 57p.

@@ -12,9 +12,8 @@ Authors@R: c(person(given = "Paulo", family = "Pagliosa",
                     email = "fabiano.schwartz@camara.leg.br",
                     comment = c(ORCID = "0000-0003-1727-9346")))
 Maintainer: Paulo Pagliosa <paulo.pagliosa@ufsc.br>
-Description: Auxilia na gestão dos Programas de Pós-graduação e no 
-    preenchimento da Plataforma Sucupira por meio da extração de 
-    informações do Currículo Lattes. 
+Description: It assists in the management of Postgraduate Programmes and in filling in the Sucupira Platform by extracting information from the Lattes CV.
+Reference: Pagliosa PR and Nascimento PO (2021). Manual de Preenchimento do Currículo Lattes: com ênfase na área de Geociências da CAPES. 57p. <https://repositorio.ufsc.br/bitstream/handle/123456789/231602/ManualLattesGeociencias11_2021_versaobeta%20%281%29.pdf?sequence=1&isAllowed=y>.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

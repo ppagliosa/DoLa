@@ -1,22 +1,17 @@
 ---
 title: "Do Lattes para o PPG - *DoLa*"
-output: html_document
+output: 
+    html_document
 ---
 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  eval = TRUE,
-	echo = FALSE,
-	message = FALSE,
-	comment = NA,
-	results = "asis",
-	warnings = FALSE
-)
+```{r setup, include = FALSE} 
+knitr::opts_chunk$set(eval = TRUE, echo = FALSE, message = FALSE, comment = NA, results = 'asis', warnings = FALSE)
+
 ```
 
 
-```{r, echo=FALSE}
+```{r, echo = FALSE}
 
 ###----------------------------------------------- Carregamento dos dados do PPG
 ano_ini <- ano_ini 
@@ -30,8 +25,7 @@ xlsx_qualis_livros <- xlsx_qualis_livros
 ```
 
 
-
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo = FALSE, warning = FALSE}
 
 ###-------------------------------------------------- Preparação para as Análises
 
@@ -140,7 +134,7 @@ clattes <- data.frame(id      = rep("", length(id.doc)),
 ```
 
 
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo = FALSE, warning = FALSE}
 
 ###------------------------------------------------ EXTRAÇÃO DOS DADOS DO LATTES
 
@@ -263,7 +257,7 @@ df_lattes <- clattes[,c(1:14)]
 ```
 
 
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo = FALSE, results = 'asis', warning = FALSE}
 
 ###------------------------------------------------------------------- RELATORIO
 ###------------------------------------------------------ cabecalho do Relatorio
