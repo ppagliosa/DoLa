@@ -12,8 +12,7 @@ Authors@R: c(person(given = "Paulo", family = "Pagliosa",
                     email = "fabiano.schwartz@camara.leg.br",
                     comment = c(ORCID = "0000-0003-1727-9346")))
 Maintainer: Paulo Pagliosa <paulo.pagliosa@ufsc.br>
-Description: It assists in the management of Postgraduate Programmes and in filling in the Sucupira Platform by extracting information from the Lattes CV.
-Reference: Pagliosa PR and Nascimento PO (2021). Manual de Preenchimento do Currículo Lattes: com ênfase na área de Geociências da CAPES. 57p. <https://repositorio.ufsc.br/bitstream/handle/123456789/231602/ManualLattesGeociencias11_2021_versaobeta%20%281%29.pdf?sequence=1&isAllowed=y>.
+Description: Managing postgraduate programmes involves extracting information from Lattes CVs. This information can be used for strategic planning and self-evaluation, as well as for producing reports on the Sucupira Platform. Summary reports are produced for each period and course (specialisation, master's and doctorate), showing bibliographic production with and without student participation, as well as papers at events, technical or technological production, ongoing and completed supervision, research projects, exchanges (visiting professor, postdoctoral or short-term leave), awards and general activity indicators. Based on this information, a detailed report is then drawn up for each lecturer, taking into account their participation in exam boards, their research project contributions, their technical collaborations (e.g. advisory committee, editorial board) and the subjects they teach. For more details see Pagliosa and Nascimento (2021) <https://repositorio.ufsc.br/bitstream/handle/123456789/231602/ManualLattesGeociencias11_2021_versaobeta%20%281%29.pdf?sequence=1&isAllowed=y>.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
