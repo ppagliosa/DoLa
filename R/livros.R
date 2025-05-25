@@ -23,6 +23,7 @@ livros <- function(id, xml_data, qualis, ano_ini, ano_fim, dic_id_cit, encode_xm
         editora <- xml_data$"PRODUCAO-BIBLIOGRAFICA"$"LIVROS-E-CAPITULOS"$"LIVROS-PUBLICADOS-OU-ORGANIZADOS"[[i]]$"DETALHAMENTO-DO-LIVRO"["NOME-DA-EDITORA"]
 
         # estrato qualis
+        if(is.null(qualis) != T) {
         eq <- qualis[qualis$ISBN == isbn, c("ISBN", "Estrato")]
         nlinhas <- nrow(eq)
         if(nlinhas > 1) {
@@ -31,6 +32,10 @@ livros <- function(id, xml_data, qualis, ano_ini, ano_fim, dic_id_cit, encode_xm
           eq <- "--"
         } else{
           eq <- eq$Estrato
+        }
+        }
+        if(is.null(qualis) == T) {
+          eq <- "--"
         }
 
         pontos <- 1
@@ -96,14 +101,19 @@ livros <- function(id, xml_data, qualis, ano_ini, ano_fim, dic_id_cit, encode_xm
         titulo <- paste0(titulo," In: ",titulodolivro)
 
         # estrato qualis
-        eq <- qualis[qualis$ISBN == isbn, c("ISBN", "Estrato")]
-        nlinhas <- nrow(eq)
-        if(nlinhas > 1) {
-          eq <- '>1'
-        } else if(nlinhas == 0) {
+        if(is.null(qualis) != T) {
+          eq <- qualis[qualis$ISBN == isbn, c("ISBN", "Estrato")]
+          nlinhas <- nrow(eq)
+          if(nlinhas > 1) {
+            eq <- '>1'
+          } else if(nlinhas == 0) {
+            eq <- "--"
+          } else{
+            eq <- eq$Estrato
+          }
+        }
+        if(is.null(qualis) == T) {
           eq <- "--"
-        } else{
-          eq <- eq$Estrato
         }
 
         pontos <- 1

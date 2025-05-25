@@ -5,7 +5,7 @@ output:
 ---
 
 
-```{r setup, include = FALSE} 
+```{r setup, include = FALSE, cache=FALSE} 
 knitr::opts_chunk$set(eval = TRUE, echo = FALSE, message = FALSE, comment = NA, results = 'asis', warnings = FALSE)
 
 ```
@@ -43,10 +43,10 @@ qualis_periodicos$Area <- str_trim(str_to_lower(encode_xml2(qualis_periodicos$Ar
 
 # Qualis Livros (arquivo facultativo)
 if(is.null(xlsx_qualis_livros) != T) {
-qualis_livros <- read.xlsx(xlsx_qualis_livros)
-names(qualis_livros) <- c("Titulo", "ISBN", "Estrato")
-qualis_livros$ISBN <- str_trim(qualis_livros$ISBN)
-qualis_livros$Estrato <- str_trim(qualis_livros$Estrato)
+  qualis_livros <- read.xlsx(xlsx_qualis_livros)
+  names(qualis_livros) <- c("Titulo", "ISBN", "Estrato")
+  qualis_livros$ISBN <- str_trim(qualis_livros$ISBN)
+  qualis_livros$Estrato <- str_trim(qualis_livros$Estrato)
 }
 if(is.null(xlsx_qualis_livros) == T) {
   qualis_livros<- NULL

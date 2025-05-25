@@ -20,7 +20,7 @@
 #' @param nome_ppg nome do Programa de Pós-graduação. Aceita diversos nomes concatenados.
 #' @param nome_area nome da Área de Avaliação do PPG na CAPES.
 #' @param xlsx_qualis nome do arquivo Excel com a classificação Qualis Periódicos CAPES.
-#' @param xlsx_qualis_livros nome do arquivo Excel com a classificação Qualis Livros CAPES.
+#' @param xlsx_qualis_livros nome do arquivo Excel com a classificação Qualis Livros CAPES. Padrão é \code{NULL}
 #' @param cv_docentes diretório com os currículos Lattes dos Docentes do PPG (arquivos xml zipados)
 #' @param cv_discentes diretório com os currículos Lattes dos Discentes do PPG (arquivos xml zipados)
 #'
@@ -91,14 +91,14 @@
 #'
 #' @examples
 #' \dontrun{
-#' DoLa::dola(ano_ini = 2019, ano_fim = 2024,
-#' nome_instituicao = c("Universidade Federal de Santa Catarina"),
-#' nome_ppg = c("Programa de Pós-graduação em Oceanografia","oceanografia"),
-#' nome_area = c("Geociências"),
-#' xlsx_qualis = system.file("extdata","Qualis.xlsx", package="DoLa"),
-#' xlsx_qualis_livros = "QualisLivros_Capes2013_2016.xlsx",
-#' cv_docentes = system.file("extdata","cv_do", package="DoLa"),
-#' cv_discentes = system.file("extdata","cv_di", package="DoLa"))}
+#' path_to_DoLa<- dola(ano_ini = 2019, ano_fim = 2024,
+#'     nome_instituicao = c("Universidade Federal de Santa Catarina"),
+#'     nome_ppg = c("Programa de Pós-graduação em Oceanografia","oceanografia"),
+#'     nome_area = c("Geociências"),
+#'     xlsx_qualis = system.file("extdata","Qualis.xlsx", package="DoLa"),
+#'     cv_docentes = system.file("extdata","cv_do", package="DoLa"),
+#'     cv_discentes = system.file("extdata","cv_di", package="DoLa"))
+#' path_to_DoLa}
 #'
 #'
 #' @import XML
@@ -137,16 +137,18 @@ dola<- function(ano_ini,
                 xlsx_qualis_livros = NULL,
                 cv_docentes,
                 cv_discentes) {
-    wd<-getwd()
-    dl<-system.file("extdata","DoLa.Rmd", package="DoLa")
-    rmarkdown::render(input = dl,
-                      output_format = "html_document",
-                      output_file = "DoLa.html",
-                      output_dir = wd,
-                      knit_root_dir = wd,
-                      envir = new.env(),
-                      run_pandoc = T)
+  wd<-system.file("extdata", package="DoLa")
+  dl<-system.file("extdata","DoLa.Rmd", package="DoLa")
+  rmarkdown::render(input = dl,
+                    output_format = "html_document",
+                    output_file = "DoLa.html",
+                    output_dir = wd,
+                    knit_root_dir = wd,
+                    envir = new.env()
+  )
+  path<- file.path(wd,"DoLa.html")
+  if(!file.exists(path)) message("Verifique seus dados. Algo saiu errado.")
+  if(interactive()) browseURL(path)
 
- if(file.exists("DoLa.html")) message("Abra o arquivo 'DoLa.html' salvo no seu diretorio para visualizar o relatorio.")
- if(!file.exists("DoLa.html")) message("Verifique seus dados. Algo saiu errado.")
+  return(path)
 }

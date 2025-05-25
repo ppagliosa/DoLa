@@ -20,7 +20,7 @@ dola(ano_ini, ano_fim, nome_instituicao, nome_ppg, nome_area, xlsx_qualis,
 
 \item{xlsx_qualis}{nome do arquivo Excel com a classificação Qualis Periódicos CAPES.}
 
-\item{xlsx_qualis_livros}{nome do arquivo Excel com a classificação Qualis Livros CAPES.}
+\item{xlsx_qualis_livros}{nome do arquivo Excel com a classificação Qualis Livros CAPES. Padrão é \code{NULL}}
 
 \item{cv_docentes}{diretório com os currículos Lattes dos Docentes do PPG (arquivos xml zipados)}
 
@@ -98,14 +98,14 @@ na Plataforma Sucupira.
 }
 \examples{
 \dontrun{
-DoLa::dola(ano_ini = 2019, ano_fim = 2024,
-nome_instituicao = c("Universidade Federal de Santa Catarina"),
-nome_ppg = c("Programa de Pós-graduação em Oceanografia","oceanografia"),
-nome_area = c("Geociências"),
-xlsx_qualis = system.file("extdata","Qualis.xlsx", package="DoLa"),
-xlsx_qualis_livros = "QualisLivros_Capes2013_2016.xlsx",
-cv_docentes = system.file("extdata","cv_do", package="DoLa"),
-cv_discentes = system.file("extdata","cv_di", package="DoLa"))}
+path_to_DoLa<- dola(ano_ini = 2019, ano_fim = 2024,
+    nome_instituicao = c("Universidade Federal de Santa Catarina"),
+    nome_ppg = c("Programa de Pós-graduação em Oceanografia","oceanografia"),
+    nome_area = c("Geociências"),
+    xlsx_qualis = system.file("extdata","Qualis.xlsx", package="DoLa"),
+    cv_docentes = system.file("extdata","cv_do", package="DoLa"),
+    cv_discentes = system.file("extdata","cv_di", package="DoLa"))
+path_to_DoLa}
 
 
 }
