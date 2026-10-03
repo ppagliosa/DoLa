@@ -1,5 +1,7 @@
 Instalação:
+
 pak::pak("ppagliosa/DoLa")
+
 library(DoLa)
 
 
