@@ -1,6 +1,6 @@
 Instalação:
-  pak::pak("ppagliosa/DoLa")
-  library(DoLa)
+pak::pak("ppagliosa/DoLa")
+library(DoLa)
 
 
 DoLa: Do Lattes para o PPG
